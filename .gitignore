@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+coverage
+work
+*.log
+.DS_Store
+.env*.local
+spirebound-mvp.zip
