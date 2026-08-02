@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   calculateStats,
   characters,
@@ -8,8 +8,13 @@ import {
   winAscension,
 } from "@/domain/ladder";
 import { CharacterId, Run, UserData } from "@/domain/types";
-import { userDataRepository } from "@/storage/userDataRepository";
-import { supabase } from "@/storage/supabase/client";
+import { validateUsername } from "@/domain/auth";
+import {
+  LocalStorageUserDataRepository,
+  SupabaseUserDataRepository,
+  UserDataRepository,
+} from "@/storage/userDataRepository";
+import { getSupabase } from "@/storage/supabase/client";
 
 const EMPTY: UserData = {
   activeRun: null,
@@ -24,9 +29,78 @@ const fmt = new Intl.DateTimeFormat("ru-RU", {
 function character(id: CharacterId) {
   return characters.find((c) => c.id === id)!;
 }
-function Login({ onLogin }: { onLogin: () => void }) {
+function Login({
+  onDemo,
+  onAuthenticated,
+}: {
+  onDemo: () => void;
+  onAuthenticated: (userId: string) => Promise<void>;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
+  const [screen, setScreen] = useState<"login" | "register" | "check-email">("login");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const supabase = getSupabase();
+
+  if (screen === "check-email") {
+    return (
+      <main className="login">
+        <div className="brand"><span className="brandmark">S</span><span>SPIRE2CODEX</span></div>
+        <section className="loginCard">
+          <div className="rune">✉</div>
+          <p className="eyebrow">ПОДТВЕРЖДЕНИЕ EMAIL</p>
+          <h1>Проверьте почту</h1>
+          <p className="muted">Мы отправили ссылку подтверждения на <strong>{email}</strong>. После перехода по ней вы автоматически войдёте в аккаунт.</p>
+          <button className="ghost fullWidth" onClick={() => setScreen("login")}>Вернуться ко входу</button>
+        </section>
+      </main>
+    );
+  }
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError("");
+    if (!supabase) {
+      setError("Supabase не настроен. Можно продолжить в demo-режиме.");
+      return;
+    }
+    setBusy(true);
+    try {
+      if (screen === "register") {
+        const usernameError = validateUsername(username);
+        if (usernameError) throw new Error(usernameError);
+        const { data: available, error: availabilityError } = await supabase.rpc(
+          "is_username_available",
+          { candidate: username },
+        );
+        if (availabilityError) throw availabilityError;
+        if (!available) throw new Error("Этот username уже занят.");
+
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { username },
+            emailRedirectTo: window.location.origin,
+          },
+        });
+        if (signUpError) throw signUpError;
+        if (data.session && data.user) await onAuthenticated(data.user.id);
+        else setScreen("check-email");
+      } else {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        await onAuthenticated(data.user.id);
+      }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Не удалось выполнить запрос.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <main className="login">
       <div className="brand">
@@ -35,28 +109,19 @@ function Login({ onLogin }: { onLogin: () => void }) {
       </div>
       <section className="loginCard">
         <div className="rune">⌁</div>
-        <p className="eyebrow">ДОБРО ПОЖАЛОВАТЬ</p>
-        <h1>Твоя история восхождений</h1>
+        <p className="eyebrow">{screen === "register" ? "НОВЫЙ АККАУНТ" : "ДОБРО ПОЖАЛОВАТЬ"}</p>
+        <h1>{screen === "register" ? "Создать аккаунт" : "Твоя история восхождений"}</h1>
         <p className="muted">
           Отмечай челленджи, следи за прогрессом и покоряй Шпиль.
         </p>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-
-            const { error } = await supabase.auth.signInWithPassword({
-              email,
-              password,
-            });
-
-            if (error) {
-              alert(error.message);
-              return;
-            }
-
-            onLogin();
-          }}
-        >
+        <form onSubmit={submit}>
+          {screen === "register" && (
+            <label>
+              Username
+              <input required minLength={3} maxLength={24} pattern="[A-Za-z0-9_-]+" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="spire_climber" />
+              <small>3–24 символа: A–Z, 0–9, _ и -. Изменить позже нельзя.</small>
+            </label>
+          )}
           <label>
             Email
             <input
@@ -64,6 +129,7 @@ function Login({ onLogin }: { onLogin: () => void }) {
               type="email"
               placeholder="you@example.com"
               value={email}
+              autoComplete="email"
               onChange={(e) => setEmail(e.target.value)}
             />
           </label>
@@ -75,63 +141,95 @@ function Login({ onLogin }: { onLogin: () => void }) {
               type="password"
               placeholder="••••••••"
               value={password}
+              autoComplete={screen === "register" ? "new-password" : "current-password"}
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
-          <button className="primary">Войти</button>
-          <button
-            type="button"
-            className="ghost"
-            onClick={async () => {
-              const { error } = await supabase.auth.signUp({
-                email,
-                password,
-              });
-
-              if (error) {
-                alert(error.message);
-                return;
-              }
-
-              alert("Проверь почту и подтверди регистрацию.");
-            }}
-          >
-            Зарегистрироваться
-          </button>
+          {error && <p className="formError" role="alert">{error}</p>}
+          <button disabled={busy} className="primary">{busy ? "Подождите…" : screen === "register" ? "Зарегистрироваться" : "Войти"}</button>
+          {screen === "login" && <button type="button" className="textButton" onClick={() => setError("Восстановление пароля пока не реализовано.")}>Забыли пароль?</button>}
         </form>
-        <button className="ghost" onClick={onLogin}>
+        <button className="ghost fullWidth" onClick={() => { setError(""); setScreen(screen === "login" ? "register" : "login"); }}>
+          {screen === "login" ? "Создать аккаунт" : "Уже есть аккаунт? Войти"}
+        </button>
+        <div className="divider"><span>или</span></div>
+        <button className="ghost fullWidth" onClick={onDemo}>
           Продолжить в demo-режиме
         </button>
-        <small>Данные demo-режима хранятся только в этом браузере.</small>
+        <p className="demoWarning">⚠ Данные demo-режима хранятся только в этом браузере и не переносятся в аккаунт.</p>
       </section>
     </main>
   );
 }
 export default function Home() {
   const [ready, setReady] = useState(false),
-    [logged, setLogged] = useState(false),
+    [mode, setMode] = useState<"account" | "demo" | null>(null),
+    [username, setUsername] = useState(""),
+    [repository, setRepository] = useState<UserDataRepository | null>(null),
+    [storageError, setStorageError] = useState(""),
     [view, setView] = useState<"home" | "ladder">("home"),
     [data, setData] = useState<UserData>(EMPTY),
     [selected, setSelected] = useState<CharacterId | null>(null),
     [pageSize, setPageSize] = useState(5),
     [page, setPage] = useState(1),
     [deleting, setDeleting] = useState<Run | null>(null);
-  useEffect(() => {
-    const saved = userDataRepository.load();
-    if (saved) {
-      setData(saved.data || EMPTY);
-      setLogged(!!saved.logged);
-    }
+  const activateAccount = useCallback(async (userId: string) => {
+    const client = getSupabase();
+    if (!client) return;
+    const repo = new SupabaseUserDataRepository(client, userId);
+    const [{ data: profile, error: profileError }, saved] = await Promise.all([
+      client.from("profiles").select("username").eq("id", userId).single(),
+      repo.load(),
+    ]);
+    if (profileError) throw profileError;
+    setData(saved ?? EMPTY);
+    setUsername(profile.username);
+    setRepository(repo);
+    setMode("account");
     setReady(true);
   }, []);
+
   useEffect(() => {
-    if (ready) userDataRepository.save({ logged, data });
-  }, [data, logged, ready]);
+    const client = getSupabase();
+    let active = true;
+    const restore = async () => {
+      if (client) {
+        const { data: { session } } = await client.auth.getSession();
+        if (session && active) {
+          try { await activateAccount(session.user.id); } catch (caught) {
+            if (active) setStorageError(caught instanceof Error ? caught.message : "Не удалось загрузить аккаунт.");
+          }
+        }
+      }
+      if (active) setReady(true);
+    };
+    void restore();
+    const subscription = client?.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session && active) void activateAccount(session.user.id);
+      if (event === "SIGNED_OUT" && active) { setMode(null); setRepository(null); setUsername(""); setData(EMPTY); }
+    }).data.subscription;
+    return () => { active = false; subscription?.unsubscribe(); };
+  }, [activateAccount]);
+
+  useEffect(() => {
+    if (!ready || !repository || !mode) return;
+    const timeout = window.setTimeout(() => {
+      repository.save(data).then(() => setStorageError("")).catch((caught) => setStorageError(caught instanceof Error ? caught.message : "Не удалось сохранить данные."));
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [data, mode, ready, repository]);
   const stats = useMemo(() => calculateStats(data.history), [data.history]);
   const pages = Math.max(1, Math.ceil(data.history.length / pageSize));
   const shown = data.history.slice((page - 1) * pageSize, page * pageSize);
   if (!ready) return null;
-  if (!logged) return <Login onLogin={() => setLogged(true)} />;
+  if (!mode) return <Login onAuthenticated={activateAccount} onDemo={() => {
+    const repo = new LocalStorageUserDataRepository();
+    repo.load().then((saved) => {
+      setData(saved ?? EMPTY);
+      setRepository(repo);
+      setMode("demo");
+    });
+  }} />;
   const finish = (result: "win" | "lose") => {
     if (!data.activeRun) return;
     const next =
@@ -164,6 +262,7 @@ export default function Home() {
           </button>
         </nav>
         <div className="headerActions">
+          <span className="identity">{mode === "demo" ? "Demo" : `@${username}`}</span>
           <label>
             Интерфейс{" "}
             <select
@@ -202,7 +301,10 @@ export default function Home() {
           </label>
           <button
             className="logout"
-            onClick={() => setLogged(false)}
+            onClick={async () => {
+              if (mode === "account") await getSupabase()?.auth.signOut();
+              else { setMode(null); setRepository(null); setData(EMPTY); }
+            }}
             aria-label="Выйти из аккаунта"
             title="Выйти из аккаунта"
           >
@@ -225,6 +327,8 @@ export default function Home() {
           </button>
         </div>
       </header>
+      {mode === "demo" && <div className="demoBanner">Demo-режим: данные хранятся только в этом браузере и не будут перенесены в аккаунт.</div>}
+      {storageError && <div className="errorBanner">Ошибка синхронизации: {storageError}</div>}
       {view === "home" ? (
         <main>
           <section className="hero">
