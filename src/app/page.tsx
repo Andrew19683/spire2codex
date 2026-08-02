@@ -15,6 +15,8 @@ import {
   UserDataRepository,
 } from "@/storage/userDataRepository";
 import { getSupabase } from "@/storage/supabase/client";
+import { CoopRepository } from "@/storage/coopRepository";
+import CoopChallenge from "./CoopChallenge";
 
 const EMPTY: UserData = {
   activeRun: null,
@@ -164,10 +166,11 @@ function Login({
 export default function Home() {
   const [ready, setReady] = useState(false),
     [mode, setMode] = useState<"account" | "demo" | null>(null),
+    [userId, setUserId] = useState(""),
     [username, setUsername] = useState(""),
     [repository, setRepository] = useState<UserDataRepository | null>(null),
     [storageError, setStorageError] = useState(""),
-    [view, setView] = useState<"home" | "ladder">("home"),
+    [view, setView] = useState<"home" | "ladder" | "coop">("home"),
     [data, setData] = useState<UserData>(EMPTY),
     [selected, setSelected] = useState<CharacterId | null>(null),
     [pageSize, setPageSize] = useState(5),
@@ -184,6 +187,7 @@ export default function Home() {
     if (profileError) throw profileError;
     setData(saved ?? EMPTY);
     setUsername(profile.username);
+    setUserId(userId);
     setRepository(repo);
     setMode("account");
     setReady(true);
@@ -206,7 +210,7 @@ export default function Home() {
     void restore();
     const subscription = client?.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session && active) void activateAccount(session.user.id);
-      if (event === "SIGNED_OUT" && active) { setMode(null); setRepository(null); setUsername(""); setData(EMPTY); }
+      if (event === "SIGNED_OUT" && active) { setMode(null); setRepository(null); setUsername(""); setUserId(""); setData(EMPTY); }
     }).data.subscription;
     return () => { active = false; subscription?.unsubscribe(); };
   }, [activateAccount]);
@@ -219,6 +223,7 @@ export default function Home() {
     return () => window.clearTimeout(timeout);
   }, [data, mode, ready, repository]);
   const stats = useMemo(() => calculateStats(data.history), [data.history]);
+  const coopRepository = useMemo(() => mode === "account" && userId && getSupabase() ? new CoopRepository(getSupabase()!, userId) : null, [mode, userId]);
   const pages = Math.max(1, Math.ceil(data.history.length / pageSize));
   const shown = data.history.slice((page - 1) * pageSize, page * pageSize);
   if (!ready) return null;
@@ -347,7 +352,7 @@ export default function Home() {
                 <p className="eyebrow">ИСПЫТАНИЯ</p>
                 <h2>Доступные челленджи</h2>
               </div>
-              <span>01 челлендж</span>
+              <span>02 челленджа</span>
             </div>
             <button className="challenge" onClick={() => setView("ladder")}>
               <div>
@@ -368,8 +373,18 @@ export default function Home() {
                 </span>
               </div>
             </button>
+            <button className="challenge coopChallenge" onClick={() => setView("coop")}>
+              <div>
+                <span className="pill coopPill">2–4 ИГРОКА</span>
+                <h3>Co-op Ladder Challenge</h3>
+                <p>Соберите команду и пройдите вознесения от A1 до A10 вместе. Общие попытки, история и статистика связок.</p>
+                <span className="link">Открыть группы →</span>
+              </div>
+            </button>
           </section>
         </main>
+      ) : view === "coop" ? (
+        <CoopChallenge repository={coopRepository} userId={userId} onBack={() => setView("home")} />
       ) : (
         <main className="ladder">
           <button className="back" onClick={() => setView("home")}>
