@@ -4,6 +4,7 @@ out
 coverage
 work
 *.log
+*.tsbuildinfo
 .DS_Store
 .env*.local
 spirebound-mvp.zip

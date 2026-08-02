@@ -1,10 +1,12 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabasePublishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+let client: SupabaseClient | null | undefined;
 
-if (!supabaseUrl || !supabasePublishableKey) {
-  throw new Error("Supabase environment variables are missing");
+export function getSupabase(): SupabaseClient | null {
+  if (client !== undefined) return client;
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  client = url && publishableKey ? createClient(url, publishableKey) : null;
+  return client;
 }
-
-export const supabase = createClient(supabaseUrl, supabasePublishableKey);
