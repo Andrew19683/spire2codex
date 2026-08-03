@@ -3,7 +3,7 @@ import { allCombinations, combinationStats, featuredCombinations } from "./coopL
 import { CoopRun } from "./coopLadder";
 
 const members = ["alice", "bob"];
-const run: CoopRun = { id: "1", assignments: { alice: "ironclad", bob: "silent" }, status: "completed", currentAscension: 10, completedAscensions: 10, startedAt: "2026-01-01" };
+const run: CoopRun = { id: "1", assignments: { alice: "ironclad", bob: "silent" }, status: "completed", currentAscension: 10, completedAscensions: 10, startedAt: "2026-01-01", lastAttemptAt: null };
 
 describe("co-op ladder", () => {
   it("generates 5^n ordered player assignments and allows duplicate characters", () => {

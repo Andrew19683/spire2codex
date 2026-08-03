@@ -2,7 +2,7 @@ import { characters } from "./ladder";
 import { CharacterId } from "./types";
 
 export type CoopMember = { userId: string; username: string; status: "pending" | "accepted"; characterId?: CharacterId };
-export type CoopRun = { id: string; assignments: Record<string, CharacterId>; status: "active" | "lost" | "completed"; currentAscension: number; completedAscensions: number; startedAt: string; finishedAt?: string };
+export type CoopRun = { id: string; assignments: Record<string, CharacterId>; status: "active" | "lost" | "completed"; currentAscension: number; completedAscensions: number; startedAt: string; finishedAt?: string; lastAttemptAt: string | null };
 export type CoopGroup = { id: string; name: string; ownerId: string; members: CoopMember[]; activeRun: CoopRun | null; history: CoopRun[]; updatedAt: string };
 export type CombinationStat = { key: string; assignments: Record<string, CharacterId>; runs: number; average: number; wins: number };
 

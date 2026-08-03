@@ -50,6 +50,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 
    Альтернатива: откройте SQL Editor и целиком выполните `supabase/migrations/20260802000000_auth_profiles_user_data.sql`. Не вносите отдельные части схемы вручную: миграция является источником истины.
 
+   Для уже настроенного production-проекта достаточно снова выполнить `supabase db push`: миграция `20260803000000_import_anton_coop.sql` добавит дату последней попытки и один раз импортирует группу «С Антоном». Перед запуском в проекте должны существовать профили `N-drew` и `1000chertey`; при их отсутствии миграция остановится без частичного импорта.
+
 2. В **Authentication → Providers → Email** оставьте включённым провайдер Email и включите **Confirm email**. SQL-миграции не управляют этой настройкой Auth.
 
 3. В **Authentication → URL Configuration** задайте:
