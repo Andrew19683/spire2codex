@@ -16,7 +16,24 @@ import {
 } from "@/storage/userDataRepository";
 import { getSupabase } from "@/storage/supabase/client";
 import { CoopRepository } from "@/storage/coopRepository";
+import { CoopGroup } from "@/domain/coopLadder";
 import CoopChallenge from "./CoopChallenge";
+
+type ChallengeCardData = {
+  id: string;
+  type: "solo" | "coop";
+  available: boolean;
+  title: string;
+  description: string;
+  icon: string;
+  primaryStatus: string;
+  additionalStatus?: string;
+  activeEntityCount: number;
+  invitationCount: number;
+  primaryRoute: "ladder" | "coop";
+  actionLabel: string;
+  displayOrder: number;
+};
 
 const EMPTY: UserData = {
   activeRun: null,
@@ -175,7 +192,8 @@ export default function Home() {
     [selected, setSelected] = useState<CharacterId | null>(null),
     [pageSize, setPageSize] = useState(5),
     [page, setPage] = useState(1),
-    [deleting, setDeleting] = useState<Run | null>(null);
+    [deleting, setDeleting] = useState<Run | null>(null),
+    [coopGroups, setCoopGroups] = useState<CoopGroup[]>([]);
   const activateAccount = useCallback(async (userId: string) => {
     const client = getSupabase();
     if (!client) return;
@@ -224,6 +242,17 @@ export default function Home() {
   }, [data, mode, ready, repository]);
   const stats = useMemo(() => calculateStats(data.history), [data.history]);
   const coopRepository = useMemo(() => mode === "account" && userId && getSupabase() ? new CoopRepository(getSupabase()!, userId) : null, [mode, userId]);
+  useEffect(() => {
+    let active = true;
+    if (!coopRepository) {
+      setCoopGroups([]);
+      return;
+    }
+    coopRepository.groups()
+      .then((groups) => { if (active) setCoopGroups(groups); })
+      .catch(() => { if (active) setCoopGroups([]); });
+    return () => { active = false; };
+  }, [coopRepository, view]);
   const pages = Math.max(1, Math.ceil(data.history.length / pageSize));
   const shown = data.history.slice((page - 1) * pageSize, page * pageSize);
   if (!ready) return null;
@@ -245,6 +274,56 @@ export default function Home() {
         : { ...d, activeRun: null, history: [next, ...d.history] },
     );
   };
+  const completedSoloRuns = data.history.filter((run) => run.status === "completed").length;
+  const pendingInvitations = coopGroups.filter((group) => group.members.find((member) => member.userId === userId)?.status === "pending");
+  const activeCoopGroups = coopGroups.filter((group) => group.members.every((member) => member.status === "accepted"));
+  const activeCoopRuns = activeCoopGroups.filter((group) => group.activeRun).length;
+  const soloStatus = data.activeRun
+    ? `Активная попытка · A${data.activeRun.currentAscension}`
+    : completedSoloRuns
+      ? `Пройден ${completedSoloRuns} ${completedSoloRuns === 1 ? "раз" : completedSoloRuns < 5 ? "раза" : "раз"}`
+      : "Нет активной попытки";
+  const coopStatus = activeCoopGroups.length === 0
+    ? "Нет активных групп"
+    : activeCoopGroups.length === 1
+      ? `1 активная группа${activeCoopRuns ? ` · забег на A${activeCoopGroups.find((group) => group.activeRun)?.activeRun?.currentAscension}` : ""}`
+      : `${activeCoopGroups.length} активные группы${activeCoopRuns ? ` · ${activeCoopRuns} ${activeCoopRuns === 1 ? "забег" : "забега"} в процессе` : ""}`;
+  const challenges: ChallengeCardData[] = [
+    {
+      id: "ladder",
+      type: "solo",
+      available: true,
+      title: "Ladder",
+      description: "Пройди десять уровней Вознесения подряд без поражений. Один персонаж, одна попытка.",
+      icon: "♜",
+      primaryStatus: soloStatus,
+      additionalStatus: data.activeRun ? "Активная попытка" : undefined,
+      activeEntityCount: data.activeRun ? 1 : 0,
+      invitationCount: 0,
+      primaryRoute: "ladder",
+      actionLabel: data.activeRun ? "Продолжить" : completedSoloRuns ? "Начать снова" : "Начать",
+      displayOrder: 1,
+    },
+    {
+      id: "coop-ladder",
+      type: "coop",
+      available: mode === "account",
+      title: "Co-op Ladder",
+      description: "Соберите постоянную группу из 2–4 игроков и пройдите A1–A10 вместе. Общая попытка и статистика связок.",
+      icon: "⚔",
+      primaryStatus: mode === "demo" ? "Доступно после входа" : coopStatus,
+      additionalStatus: pendingInvitations.length ? `${pendingInvitations.length} ${pendingInvitations.length === 1 ? "приглашение" : "приглашения"}` : undefined,
+      activeEntityCount: activeCoopGroups.length,
+      invitationCount: pendingInvitations.length,
+      primaryRoute: "coop",
+      actionLabel: activeCoopGroups.length === 0 ? "Создать группу" : activeCoopGroups.length === 1 ? "Открыть группу" : "Открыть группы",
+      displayOrder: 1,
+    },
+  ];
+  const challengeSections = [
+    { type: "solo" as const, icon: "♙", title: "Соло", description: "Личные испытания и статистика отдельных забегов" },
+    { type: "coop" as const, icon: "♟", title: "Кооператив", description: "Испытания для постоянных групп игроков" },
+  ];
   return (
     <div className="app">
       <header>
@@ -346,42 +425,37 @@ export default function Home() {
               Выбери испытание, начни забег и оставь свой след в истории Шпиля.
             </p>
           </section>
-          <section>
-            <div className="sectionTitle">
-              <div>
-                <p className="eyebrow">ИСПЫТАНИЯ</p>
-                <h2>Доступные челленджи</h2>
-              </div>
-              <span>02 челленджа</span>
-            </div>
-            <button className="challenge" onClick={() => setView("ladder")}>
-              <div>
-                <span
-                  className={`pill ${data.activeRun ? "inProgress" : "notStarted"}`}
-                >
-                  {data.activeRun ? "В ПРОЦЕССЕ" : "НЕ НАЧАТ"}
-                </span>
-                <h3>Ladder Challenge</h3>
-                <p>
-                  Пройди вознесения от A1 до A10 без единого поражения. Один
-                  персонаж. Одна попытка.
-                </p>
-                <span className="link">
-                  {data.activeRun
-                    ? `Продолжить с A${data.activeRun.currentAscension} →`
-                    : "Начать восхождение →"}
-                </span>
-              </div>
-            </button>
-            <button className="challenge coopChallenge" onClick={() => setView("coop")}>
-              <div>
-                <span className="pill coopPill">2–4 ИГРОКА</span>
-                <h3>Co-op Ladder Challenge</h3>
-                <p>Соберите команду и пройдите вознесения от A1 до A10 вместе. Общие попытки, история и статистика связок.</p>
-                <span className="link">Открыть группы →</span>
-              </div>
-            </button>
-          </section>
+          <div className="challengeSections">
+            {challengeSections.map((section) => {
+              const cards = challenges.filter((challenge) => challenge.type === section.type).sort((a, b) => a.displayOrder - b.displayOrder);
+              return (
+                <section className={`challengeSection ${section.type}`} key={section.type}>
+                  <div className="challengeSectionHead">
+                    <span className="sectionModeIcon" aria-hidden="true">{section.icon}</span>
+                    <div>
+                      <h2>{section.title}</h2>
+                      <p>{section.description}</p>
+                    </div>
+                    <span className="challengeCount">{cards.length} {cards.length === 1 ? "челлендж" : "челленджа"}</span>
+                  </div>
+                  <div className="challengeGrid">
+                    {cards.map((challenge) => (
+                      <button className="challengeCard" key={challenge.id} onClick={() => setView(challenge.primaryRoute)}>
+                        <span className="challengeIcon" aria-hidden="true">{challenge.icon}</span>
+                        {challenge.additionalStatus && (
+                          <span className={`urgentBadge ${challenge.invitationCount ? "invitation" : "active"}`}>{challenge.additionalStatus}</span>
+                        )}
+                        <h3>{challenge.title}</h3>
+                        <p className="challengeDescription">{challenge.description}</p>
+                        <div className={`challengeStatus ${challenge.activeEntityCount ? "highlighted" : ""}`}>{challenge.primaryStatus}</div>
+                        <span className="challengeAction">{challenge.actionLabel}<span aria-hidden="true">→</span></span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         </main>
       ) : view === "coop" ? (
         <CoopChallenge repository={coopRepository} userId={userId} onBack={() => setView("home")} />
