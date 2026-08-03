@@ -1,11 +1,13 @@
 import { CharacterId, Run } from "./types";
 
-export const characters: {id:CharacterId; name:string; sigil:string; color:string}[] = [
-  {id:"ironclad",name:"Ironclad",sigil:"◆",color:"#ba4538"},
-  {id:"silent",name:"Silent",sigil:"◒",color:"#4b8b62"},
-  {id:"regent",name:"Regent",sigil:"✦",color:"#d0a04b"},
-  {id:"necrobinder",name:"Necrobinder",sigil:"☽",color:"#7661a8"},
-  {id:"defect",name:"Defect",sigil:"◎",color:"#4b82a8"},
+export type Character = { id: CharacterId; name: string; initials: string; sigil: string; color: string; order: number; available: boolean; portrait?: string };
+
+export const characters: Character[] = [
+  {id:"ironclad",name:"Ironclad",initials:"IC",sigil:"◆",color:"#ba4538",order:1,available:true},
+  {id:"silent",name:"Silent",initials:"SL",sigil:"◒",color:"#4b8b62",order:2,available:true},
+  {id:"regent",name:"Regent",initials:"RG",sigil:"✦",color:"#d0a04b",order:3,available:true},
+  {id:"necrobinder",name:"Necrobinder",initials:"NB",sigil:"☽",color:"#7661a8",order:4,available:true},
+  {id:"defect",name:"Defect",initials:"DF",sigil:"◎",color:"#4b82a8",order:5,available:true},
 ];
 export function createRun(characterId:CharacterId, now=new Date()):Run { return {id:crypto.randomUUID(),characterId,status:"active",currentAscension:1,completedAscensions:0,startedAt:now.toISOString()}; }
 export function winAscension(run:Run, now=new Date()):Run { if(run.status!=="active") return run; const done=run.currentAscension; return done===10?{...run,status:"completed",completedAscensions:10,finishedAt:now.toISOString()}:{...run,completedAscensions:done,currentAscension:done+1}; }
