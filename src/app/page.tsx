@@ -18,6 +18,7 @@ import { getSupabase } from "@/storage/supabase/client";
 import { CoopRepository } from "@/storage/coopRepository";
 import { CoopGroup } from "@/domain/coopLadder";
 import CoopChallenge from "./CoopChallenge";
+import Brand from "./Brand";
 
 type ChallengeCardData = {
   id: string;
@@ -66,7 +67,7 @@ function Login({
   if (screen === "check-email") {
     return (
       <main className="login">
-        <div className="brand"><span className="brandmark">S</span><span>SPIRE2CODEX</span></div>
+        <div className="brand"><Brand /></div>
         <section className="loginCard">
           <div className="rune">✉</div>
           <p className="eyebrow">ПОДТВЕРЖДЕНИЕ EMAIL</p>
@@ -123,8 +124,7 @@ function Login({
   return (
     <main className="login">
       <div className="brand">
-        <span className="brandmark">S</span>
-        <span>SPIRE2CODEX</span>
+        <Brand />
       </div>
       <section className="loginCard">
         <div className="rune">⌁</div>
@@ -328,8 +328,7 @@ export default function Home() {
     <div className="app">
       <header>
         <button className="brand buttonish" onClick={() => setView("home")}>
-          <span className="brandmark">S</span>
-          <span>SPIRE2CODEX</span>
+          <Brand />
         </button>
         <nav>
           <button

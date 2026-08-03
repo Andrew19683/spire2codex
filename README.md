@@ -1,5 +1,11 @@
 # Spire2Codex — Slay the Spire 2 Challenge Portal
 
+## Branding
+
+The header and authentication screens use `public/spire2codex-logo.png` by default.
+Set `NEXT_PUBLIC_BRAND_LOGO_SRC` to another local public path or image URL to replace it,
+and optionally set `NEXT_PUBLIC_BRAND_LOGO_ALT` to update its accessible label.
+
 Портал игровых челленджей на Next.js и Supabase. Поддерживает настоящие аккаунты с подтверждением email и отдельный demo-режим без регистрации.
 
 ## Возможности
