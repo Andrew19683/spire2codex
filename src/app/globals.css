@@ -28,3 +28,10 @@
 .confirmContent{margin:18px 0 25px}.confirmAssignments{min-width:300px;margin:0}.confirmAssignments li{text-align:left}
 @media(max-width:800px){.characterSelection .playerChoices{grid-template-columns:1fr}.selectionFooter{grid-template-columns:1fr}.startArea{align-items:stretch}.startArea .start{width:100%;margin:0}.startArea small{text-align:center;max-width:none}}
 @media(max-width:520px){.characterPicker{grid-template-columns:repeat(3,minmax(0,1fr))}.summaryHead{align-items:flex-end}.summaryHead .random{white-space:nowrap}.modal>div:last-child{flex-direction:column}.modal>div:last-child button{width:100%}.confirmAssignments{min-width:0}}
+
+/* Active co-op runs keep their statistics visible without assignment actions. */
+.featuredGrid.active{grid-template-columns:repeat(2,1fr)}
+.combinationItem{display:grid;width:100%;grid-template-columns:1fr auto;text-align:left;padding:14px;background:#0d1011;border:1px solid var(--line);color:var(--text);margin-bottom:8px}
+.combinationItem span{font-size:11px}
+.combinationItem small{grid-column:1;color:var(--muted);margin-top:6px}
+@media(max-width:800px){.featuredGrid.active{grid-template-columns:1fr}}
