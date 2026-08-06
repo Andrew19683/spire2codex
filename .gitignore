@@ -8,3 +8,4 @@ work
 .DS_Store
 .env*.local
 spirebound-mvp.zip
+supabase/.temp/
