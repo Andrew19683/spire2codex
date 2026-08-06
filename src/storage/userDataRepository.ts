@@ -1,5 +1,6 @@
 import { UserData } from "@/domain/types";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { emptyMasterRotation } from "@/domain/masterRotation";
 
 export interface UserDataRepository {
   load(): Promise<UserData | null>;
@@ -10,6 +11,7 @@ const STORAGE_KEY = "spire2codex.demo.v1";
 const LEGACY_STORAGE_KEY = "spirebound.demo.v1";
 
 type LegacyStoredSession = { logged?: boolean; data?: UserData };
+const normalize = (data:UserData):UserData => ({...data,masterRotation:data.masterRotation??emptyMasterRotation()});
 
 export class LocalStorageUserDataRepository implements UserDataRepository {
   async load(): Promise<UserData | null> {
@@ -18,9 +20,9 @@ export class LocalStorageUserDataRepository implements UserDataRepository {
     try {
       const parsed = JSON.parse(raw) as UserData | LegacyStoredSession;
       if ("activeRun" in parsed && "history" in parsed && "preferences" in parsed) {
-        return parsed;
+        return normalize(parsed as UserData);
       }
-      return parsed.data ?? null;
+      return parsed.data ? normalize(parsed.data) : null;
     } catch {
       return null;
     }
@@ -45,7 +47,7 @@ export class SupabaseUserDataRepository implements UserDataRepository {
       .eq("user_id", this.userId)
       .maybeSingle();
     if (error) throw error;
-    return (data?.data as UserData | undefined) ?? null;
+    return data?.data ? normalize(data.data as UserData) : null;
   }
 
   async save(value: UserData): Promise<void> {

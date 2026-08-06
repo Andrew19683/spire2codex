@@ -19,6 +19,8 @@ import { CoopRepository } from "@/storage/coopRepository";
 import { CoopGroup } from "@/domain/coopLadder";
 import CoopChallenge from "./CoopChallenge";
 import Brand from "./Brand";
+import MasterRotationChallenge from "./MasterRotationChallenge";
+import { emptyMasterRotation } from "@/domain/masterRotation";
 
 type ChallengeCardData = {
   id: string;
@@ -31,7 +33,7 @@ type ChallengeCardData = {
   additionalStatus?: string;
   activeEntityCount: number;
   invitationCount: number;
-  primaryRoute: "ladder" | "coop";
+  primaryRoute: "ladder" | "coop" | "master-rotation";
   actionLabel: string;
   displayOrder: number;
 };
@@ -40,6 +42,7 @@ const EMPTY: UserData = {
   activeRun: null,
   history: [],
   preferences: { interfaceLocale: "ru", contentLocale: "en" },
+  masterRotation: emptyMasterRotation(),
 };
 const fmt = new Intl.DateTimeFormat("ru-RU", {
   day: "2-digit",
@@ -187,7 +190,7 @@ export default function Home() {
     [username, setUsername] = useState(""),
     [repository, setRepository] = useState<UserDataRepository | null>(null),
     [storageError, setStorageError] = useState(""),
-    [view, setView] = useState<"home" | "ladder" | "coop">("home"),
+    [view, setView] = useState<"home" | "ladder" | "coop" | "master-rotation">("home"),
     [data, setData] = useState<UserData>(EMPTY),
     [selected, setSelected] = useState<CharacterId | null>(null),
     [pageSize, setPageSize] = useState(5),
@@ -303,6 +306,23 @@ export default function Home() {
       primaryRoute: "ladder",
       actionLabel: data.activeRun ? "Продолжить" : completedSoloRuns ? "Начать снова" : "Начать",
       displayOrder: 1,
+    },
+    {
+      id: "master-rotation",
+      type: "solo",
+      available: true,
+      title: "Master Rotation",
+      description: "Пройдите выбранное Вознесение каждым персонажем. Поражение сбрасывает ротацию, Fairy сохраняет уровень.",
+      icon: "↻",
+      primaryStatus: data.masterRotation.initialized
+        ? `${data.masterRotation.mode === "master" ? "Master Mode" : `A${data.masterRotation.currentAscension}`} · 🧚 ${data.masterRotation.fairies}`
+        : "Режим не выбран",
+      additionalStatus: data.masterRotation.activeAttempt ? "Активная ротация" : undefined,
+      activeEntityCount: data.masterRotation.activeAttempt ? 1 : 0,
+      invitationCount: 0,
+      primaryRoute: "master-rotation",
+      actionLabel: data.masterRotation.activeAttempt ? "Продолжить" : data.masterRotation.initialized ? "Открыть" : "Выбрать режим",
+      displayOrder: 2,
     },
     {
       id: "coop-ladder",
@@ -458,6 +478,8 @@ export default function Home() {
         </main>
       ) : view === "coop" ? (
         <CoopChallenge repository={coopRepository} userId={userId} onBack={() => setView("home")} />
+      ) : view === "master-rotation" ? (
+        <MasterRotationChallenge data={data.masterRotation} onChange={(masterRotation) => setData((current) => ({...current, masterRotation}))} onBack={() => setView("home")} />
       ) : (
         <main className="ladder">
           <button className="back" onClick={() => setView("home")}>
