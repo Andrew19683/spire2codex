@@ -21,6 +21,9 @@ import CoopChallenge from "./CoopChallenge";
 import Brand from "./Brand";
 import MasterRotationChallenge from "./MasterRotationChallenge";
 import { emptyMasterRotation } from "@/domain/masterRotation";
+import { CoopMasterRepository } from "@/storage/coopMasterRepository";
+import { CoopMasterGroup } from "@/domain/coopMasterRotation";
+import CoopMasterRotationChallenge from "./CoopMasterRotationChallenge";
 
 type ChallengeCardData = {
   id: string;
@@ -33,7 +36,7 @@ type ChallengeCardData = {
   additionalStatus?: string;
   activeEntityCount: number;
   invitationCount: number;
-  primaryRoute: "ladder" | "coop" | "master-rotation";
+  primaryRoute: "ladder" | "coop" | "master-rotation" | "coop-master-rotation";
   actionLabel: string;
   displayOrder: number;
 };
@@ -190,13 +193,14 @@ export default function Home() {
     [username, setUsername] = useState(""),
     [repository, setRepository] = useState<UserDataRepository | null>(null),
     [storageError, setStorageError] = useState(""),
-    [view, setView] = useState<"home" | "ladder" | "coop" | "master-rotation">("home"),
+    [view, setView] = useState<"home" | "ladder" | "coop" | "master-rotation" | "coop-master-rotation">("home"),
     [data, setData] = useState<UserData>(EMPTY),
     [selected, setSelected] = useState<CharacterId | null>(null),
     [pageSize, setPageSize] = useState(5),
     [page, setPage] = useState(1),
     [deleting, setDeleting] = useState<Run | null>(null),
-    [coopGroups, setCoopGroups] = useState<CoopGroup[]>([]);
+    [coopGroups, setCoopGroups] = useState<CoopGroup[]>([]),
+    [coopMasterGroups, setCoopMasterGroups] = useState<CoopMasterGroup[]>([]);
   const activateAccount = useCallback(async (userId: string) => {
     const client = getSupabase();
     if (!client) return;
@@ -245,6 +249,7 @@ export default function Home() {
   }, [data, mode, ready, repository]);
   const stats = useMemo(() => calculateStats(data.history), [data.history]);
   const coopRepository = useMemo(() => mode === "account" && userId && getSupabase() ? new CoopRepository(getSupabase()!, userId) : null, [mode, userId]);
+  const coopMasterRepository = useMemo(() => mode === "account" && userId && getSupabase() ? new CoopMasterRepository(getSupabase()!, userId) : null, [mode, userId]);
   useEffect(() => {
     let active = true;
     if (!coopRepository) {
@@ -256,6 +261,12 @@ export default function Home() {
       .catch(() => { if (active) setCoopGroups([]); });
     return () => { active = false; };
   }, [coopRepository, view]);
+  useEffect(() => {
+    let active = true;
+    if (!coopMasterRepository) { setCoopMasterGroups([]); return; }
+    coopMasterRepository.groups().then((groups) => { if (active) setCoopMasterGroups(groups); }).catch(() => { if (active) setCoopMasterGroups([]); });
+    return () => { active = false; };
+  }, [coopMasterRepository, view]);
   const pages = Math.max(1, Math.ceil(data.history.length / pageSize));
   const shown = data.history.slice((page - 1) * pageSize, page * pageSize);
   if (!ready) return null;
@@ -281,6 +292,8 @@ export default function Home() {
   const pendingInvitations = coopGroups.filter((group) => group.members.find((member) => member.userId === userId)?.status === "pending");
   const activeCoopGroups = coopGroups.filter((group) => group.members.every((member) => member.status === "accepted"));
   const activeCoopRuns = activeCoopGroups.filter((group) => group.activeRun).length;
+  const pendingMasterInvitations = coopMasterGroups.filter((group) => group.members.find((member) => member.userId === userId)?.status === "pending");
+  const activeMasterGroups = coopMasterGroups.filter((group) => group.members.every((member) => member.status === "accepted"));
   const soloStatus = data.activeRun
     ? `Активная попытка · A${data.activeRun.currentAscension}`
     : completedSoloRuns
@@ -306,6 +319,21 @@ export default function Home() {
       primaryRoute: "ladder",
       actionLabel: data.activeRun ? "Продолжить" : completedSoloRuns ? "Начать снова" : "Начать",
       displayOrder: 1,
+    },
+    {
+      id: "coop-master-rotation",
+      type: "coop",
+      available: mode === "account",
+      title: "Co-op Master Rotation",
+      description: "Освойте каждое Вознесение всеми персонажами каждого участника. Общая ротация, Fairy и групповая статистика.",
+      icon: "↻",
+      primaryStatus: mode === "demo" ? "Доступно после входа" : activeMasterGroups.length ? `${activeMasterGroups.length} ${activeMasterGroups.length === 1 ? "активная группа" : "активные группы"}` : "Нет активных групп",
+      additionalStatus: pendingMasterInvitations.length ? `${pendingMasterInvitations.length} ${pendingMasterInvitations.length === 1 ? "приглашение" : "приглашения"}` : undefined,
+      activeEntityCount: activeMasterGroups.length,
+      invitationCount: pendingMasterInvitations.length,
+      primaryRoute: "coop-master-rotation",
+      actionLabel: activeMasterGroups.length ? "Открыть группы" : "Создать группу",
+      displayOrder: 2,
     },
     {
       id: "master-rotation",
@@ -480,6 +508,8 @@ export default function Home() {
         <CoopChallenge repository={coopRepository} userId={userId} onBack={() => setView("home")} />
       ) : view === "master-rotation" ? (
         <MasterRotationChallenge data={data.masterRotation} onChange={(masterRotation) => setData((current) => ({...current, masterRotation}))} onBack={() => setView("home")} />
+      ) : view === "coop-master-rotation" ? (
+        <CoopMasterRotationChallenge repository={coopMasterRepository} userId={userId} onBack={() => setView("home")} />
       ) : (
         <main className="ladder">
           <button className="back" onClick={() => setView("home")}>
