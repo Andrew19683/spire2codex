@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { CoopMasterGroup, coopMasterStats } from "./coopMasterRotation";
+import { replaceCharacters } from "./ladder";
+import { testCharacters } from "./testCharacters";
+beforeAll(() => replaceCharacters(testCharacters));
 
 const group: CoopMasterGroup = {
   id: "g", name: "Team", ownerId: "alice", initialized: true, mode: "normal", currentAscension: 3, maxAscension: 4, fairies: 1, completedA10Once: false, activeAttempt: null, updatedAt: "2026-08-07",

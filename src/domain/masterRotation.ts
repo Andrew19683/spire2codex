@@ -1,4 +1,4 @@
-import { characters } from "./ladder";
+import { allCharacters, characters } from "./ladder";
 import { CharacterId, MasterRotationAttempt, MasterRotationData, MasterRotationHistory, MasterRotationMode } from "./types";
 
 export const emptyMasterRotation = (): MasterRotationData => ({
@@ -50,7 +50,7 @@ export function masterRotationStats(data:MasterRotationData){
   for(const item of data.history){if(item.ascension!==10) continue;if(!item.successful) break;a10Streak++;}
   const failed=data.history.filter(item=>!item.successful);
   const averageProgress=failed.length?failed.reduce((sum,item)=>sum+item.completedCharacters.length,0)/failed.length:0;
-  const characterStats=characters.map(character=>{
+  const characterStats=allCharacters.map(character=>{
     const records=data.history.filter(item=>item.completedCharacters.includes(character.id)||item.lostCharacter===character.id);
     const wins=records.filter(item=>item.completedCharacters.includes(character.id)).length;
     const maxAscension=records.reduce((max,item)=>Math.max(max,item.ascension),0);

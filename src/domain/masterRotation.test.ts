@@ -1,6 +1,9 @@
-import {describe,expect,it} from "vitest";
+import {beforeAll,describe,expect,it} from "vitest";
 import {enableMasterMode,initializeMasterRotation,loseMasterCharacter,startMasterCharacter,winMasterCharacter} from "./masterRotation";
 import {CharacterId} from "./types";
+import {replaceCharacters} from "./ladder";
+import {testCharacters} from "./testCharacters";
+beforeAll(()=>replaceCharacters(testCharacters));
 
 const ids:CharacterId[]=["ironclad","silent","regent","necrobinder","defect"];
 describe("master rotation",()=>{

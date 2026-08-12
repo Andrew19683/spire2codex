@@ -1,11 +1,11 @@
 "use client";
 import { CSSProperties, useCallback, useEffect, useMemo, useState } from "react";
 import { CoopMasterGroup, coopMasterStats } from "@/domain/coopMasterRotation";
-import { characters } from "@/domain/ladder";
+import { characterById, characters } from "@/domain/ladder";
 import { CharacterId, MasterRotationMode } from "@/domain/types";
 import { CoopMasterRepository } from "@/storage/coopMasterRepository";
 
-const getCharacter=(id:CharacterId)=>characters.find(item=>item.id===id)!;
+const getCharacter=(id:CharacterId)=>characterById(id);
 const fmt=new Intl.DateTimeFormat("ru-RU",{day:"2-digit",month:"short",year:"numeric"});
 
 export default function CoopMasterRotationChallenge({repository,userId,onBack}:{repository:CoopMasterRepository|null;userId:string;onBack:()=>void}){

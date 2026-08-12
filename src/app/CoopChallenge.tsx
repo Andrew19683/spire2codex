@@ -1,12 +1,12 @@
 "use client";
 import { CSSProperties, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { CombinationStat, CoopGroup, combinationStats, featuredCombinations } from "@/domain/coopLadder";
-import { characters } from "@/domain/ladder";
+import { characterById, characters } from "@/domain/ladder";
 import { CharacterId } from "@/domain/types";
 import { CoopRepository } from "@/storage/coopRepository";
 
 const fmt = new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "short", year: "numeric" });
-const getCharacter = (id: CharacterId) => characters.find((item) => item.id === id)!;
+const getCharacter = (id: CharacterId) => characterById(id);
 
 export default function CoopChallenge({ repository, userId, onBack }: { repository: CoopRepository | null; userId: string; onBack: () => void }) {
   const [groups, setGroups] = useState<CoopGroup[]>([]), [profiles, setProfiles] = useState<{id:string;username:string}[]>([]), [openId, setOpenId] = useState<string | null>(null);

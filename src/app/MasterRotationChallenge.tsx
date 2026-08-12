@@ -1,11 +1,11 @@
 "use client";
 import { CSSProperties, useMemo, useState } from "react";
-import { characters } from "@/domain/ladder";
+import { characterById, characters } from "@/domain/ladder";
 import { enableMasterMode, initializeMasterRotation, loseMasterCharacter, masterRotationStats, startMasterCharacter, winMasterCharacter } from "@/domain/masterRotation";
 import { CharacterId, MasterRotationData } from "@/domain/types";
 
 const fmt=new Intl.DateTimeFormat("ru-RU",{day:"2-digit",month:"short",year:"numeric"});
-const getCharacter=(id:CharacterId)=>characters.find(item=>item.id===id)!;
+const getCharacter=(id:CharacterId)=>characterById(id);
 
 export default function MasterRotationChallenge({data,onChange,onBack}:{data:MasterRotationData;onChange:(data:MasterRotationData)=>void;onBack:()=>void}){
   const [selected,setSelected]=useState<CharacterId|null>(null),[masterConfirm,setMasterConfirm]=useState(false),[lossConfirm,setLossConfirm]=useState(false),[page,setPage]=useState(1);

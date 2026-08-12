@@ -2,9 +2,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   calculateStats,
+  characterById,
   characters,
   createRun,
   loseRun,
+  replaceCharacters,
   winAscension,
 } from "@/domain/ladder";
 import { CharacterId, Run, UserData } from "@/domain/types";
@@ -24,6 +26,7 @@ import { emptyMasterRotation } from "@/domain/masterRotation";
 import { CoopMasterRepository } from "@/storage/coopMasterRepository";
 import { CoopMasterGroup } from "@/domain/coopMasterRotation";
 import CoopMasterRotationChallenge from "./CoopMasterRotationChallenge";
+import { ContentRepository } from "@/storage/contentRepository";
 
 type ChallengeCardData = {
   id: string;
@@ -53,7 +56,7 @@ const fmt = new Intl.DateTimeFormat("ru-RU", {
   year: "numeric",
 });
 function character(id: CharacterId) {
-  return characters.find((c) => c.id === id)!;
+  return characterById(id);
 }
 function Login({
   onDemo,
@@ -193,6 +196,8 @@ export default function Home() {
     [username, setUsername] = useState(""),
     [repository, setRepository] = useState<UserDataRepository | null>(null),
     [storageError, setStorageError] = useState(""),
+    [contentError, setContentError] = useState(""),
+    [, setContentRevision] = useState(0),
     [view, setView] = useState<"home" | "ladder" | "coop" | "master-rotation" | "coop-master-rotation">("home"),
     [data, setData] = useState<UserData>(EMPTY),
     [selected, setSelected] = useState<CharacterId | null>(null),
@@ -201,6 +206,25 @@ export default function Home() {
     [deleting, setDeleting] = useState<Run | null>(null),
     [coopGroups, setCoopGroups] = useState<CoopGroup[]>([]),
     [coopMasterGroups, setCoopMasterGroups] = useState<CoopMasterGroup[]>([]);
+  useEffect(() => {
+    const client = getSupabase();
+    let active = true;
+    if (!client) {
+      setContentError("Supabase не настроен: каталог игрового контента недоступен.");
+      return;
+    }
+    new ContentRepository(client).characters(data.preferences.contentLocale)
+      .then((items) => {
+        if (!active) return;
+        replaceCharacters(items);
+        setContentRevision((value) => value + 1);
+        setContentError(items.some((item) => item.available) ? "" : "В каталоге нет активных персонажей.");
+      })
+      .catch((caught) => {
+        if (active) setContentError(caught instanceof Error ? caught.message : "Не удалось загрузить игровой контент.");
+      });
+    return () => { active = false; };
+  }, [data.preferences.contentLocale]);
   const activateAccount = useCallback(async (userId: string) => {
     const client = getSupabase();
     if (!client) return;
@@ -247,7 +271,7 @@ export default function Home() {
     }, 250);
     return () => window.clearTimeout(timeout);
   }, [data, mode, ready, repository]);
-  const stats = useMemo(() => calculateStats(data.history), [data.history]);
+  const stats = calculateStats(data.history);
   const coopRepository = useMemo(() => mode === "account" && userId && getSupabase() ? new CoopRepository(getSupabase()!, userId) : null, [mode, userId]);
   const coopMasterRepository = useMemo(() => mode === "account" && userId && getSupabase() ? new CoopMasterRepository(getSupabase()!, userId) : null, [mode, userId]);
   useEffect(() => {
@@ -460,6 +484,7 @@ export default function Home() {
       </header>
       {mode === "demo" && <div className="demoBanner">Demo-режим: данные хранятся только в этом браузере и не будут перенесены в аккаунт.</div>}
       {storageError && <div className="errorBanner">Ошибка синхронизации: {storageError}</div>}
+      {contentError && <div className="errorBanner">Ошибка каталога: {contentError}</div>}
       {view === "home" ? (
         <main>
           <section className="hero">
