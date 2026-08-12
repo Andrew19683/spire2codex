@@ -1,4 +1,5 @@
-export type CharacterId = "ironclad" | "silent" | "regent" | "necrobinder" | "defect";
+export type CharacterId = string;
+export type Character = { id: CharacterId; name: string; initials: string; sigil: string; color: string; order: number; available: boolean; portrait?: string };
 export type RunStatus = "active" | "lost" | "completed";
 export type Run = { id:string; characterId:CharacterId; status:RunStatus; currentAscension:number; completedAscensions:number; startedAt:string; finishedAt?:string };
 export type Preferences = { interfaceLocale:"ru"|"en"; contentLocale:"en"|"ru" };

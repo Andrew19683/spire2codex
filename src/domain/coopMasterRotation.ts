@@ -1,4 +1,4 @@
-import { characters } from "./ladder";
+import { allCharacters } from "./ladder";
 import { CharacterId, MasterRotationMode } from "./types";
 import { CoopMember } from "./coopLadder";
 
@@ -46,7 +46,7 @@ export function coopMasterStats(group: CoopMasterGroup) {
     ? failed.reduce((sum, item) => sum + Object.values(item.completed).reduce((total, ids) => total + ids.length, 0), 0) / failed.length
     : 0;
   const players = group.members.map((member) => {
-    const characterStats = characters.map((character) => {
+    const characterStats = allCharacters.map((character) => {
       const records = group.history.filter((item) => item.completed[member.userId]?.includes(character.id) || item.lostAssignments?.[member.userId] === character.id);
       const wins = records.filter((item) => item.completed[member.userId]?.includes(character.id)).length;
       return { characterId: character.id, attempts: records.length, wins, winRate: records.length ? wins / records.length : 0, maxAscension: records.reduce((max, item) => Math.max(max, item.ascension), 0) };

@@ -1,6 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { allCombinations, combinationStats, featuredCombinations } from "./coopLadder";
 import { CoopRun } from "./coopLadder";
+import { replaceCharacters } from "./ladder";
+import { testCharacters } from "./testCharacters";
+beforeAll(() => replaceCharacters(testCharacters));
 
 const members = ["alice", "bob"];
 const run: CoopRun = { id: "1", assignments: { alice: "ironclad", bob: "silent" }, status: "completed", currentAscension: 10, completedAscensions: 10, startedAt: "2026-01-01", lastAttemptAt: null };
@@ -19,5 +22,9 @@ describe("co-op ladder", () => {
     const featured = featuredCombinations(combinationStats(members, [run]));
     expect(featured.worst.map((item) => item.key)).not.toContain(featured.best[0].key);
     expect(featured.random).toHaveLength(3);
+  });
+  it("builds combinations from the current catalog", () => {
+    replaceCharacters([...testCharacters, { ...testCharacters[0], id: "new_hero", order: 6 }]);
+    expect(allCombinations(members)).toHaveLength(36);
   });
 });
