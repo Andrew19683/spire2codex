@@ -1,4 +1,5 @@
 import { Character, CharacterId, Run } from "./types";
+import { characterPresentation } from "./characterPresentation";
 
 export const characters: Character[] = [];
 export const allCharacters: Character[] = [];
@@ -7,7 +8,7 @@ export function replaceCharacters(next: Character[]) {
   characters.splice(0, characters.length, ...next.filter((item) => item.available));
 }
 export function characterById(id: CharacterId) {
-  return allCharacters.find((item) => item.id === id) ?? { id, name: id, initials: id.slice(0, 2).toUpperCase(), sigil: "◆", color: "#666", order: Number.MAX_SAFE_INTEGER, available: false };
+  return allCharacters.find((item) => item.id === id) ?? { id, name: id, ...characterPresentation(id, id), order: Number.MAX_SAFE_INTEGER, available: false };
 }
 export function createRun(characterId:CharacterId, now=new Date()):Run { return {id:crypto.randomUUID(),characterId,status:"active",currentAscension:1,completedAscensions:0,startedAt:now.toISOString()}; }
 export function winAscension(run:Run, now=new Date()):Run { if(run.status!=="active") return run; const done=run.currentAscension; return done===10?{...run,status:"completed",completedAscensions:10,finishedAt:now.toISOString()}:{...run,completedAscensions:done,currentAscension:done+1}; }

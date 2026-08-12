@@ -1,14 +1,9 @@
 import { Character, CharacterId } from "@/domain/types";
+import { characterPresentation } from "@/domain/characterPresentation";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 type CharacterRow = { id: string; display_order: number; active: boolean };
 type TranslationRow = { character_id: string; locale: string; name: string };
-
-const colorFor = (id: string) => {
-  let hash = 0;
-  for (const char of id) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-  return `hsl(${hash % 360} 38% 48%)`;
-};
 
 export class ContentRepository {
   constructor(private readonly client: SupabaseClient) {}
@@ -30,14 +25,15 @@ export class ContentRepository {
       if (item.locale === locale) names.set(item.character_id, item.name);
     }
 
-    return ((rows ?? []) as CharacterRow[]).map((item) => ({
-      id: item.id as CharacterId,
-      name: names.get(item.id) ?? item.id,
-      initials: (names.get(item.id) ?? item.id).slice(0, 2).toUpperCase(),
-      sigil: "◆",
-      color: colorFor(item.id),
-      order: item.display_order,
-      available: item.active,
-    }));
+    return ((rows ?? []) as CharacterRow[]).map((item) => {
+      const name = names.get(item.id) ?? item.id;
+      return {
+        id: item.id as CharacterId,
+        name,
+        ...characterPresentation(item.id, name),
+        order: item.display_order,
+        available: item.active,
+      };
+    });
   }
 }
