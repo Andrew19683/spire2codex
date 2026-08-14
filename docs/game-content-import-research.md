@@ -124,6 +124,7 @@ game installation
 - `show_in_card_library`: значение свойства игры.
 - `multiplayer_constraint`: исходное ограничение игры (`None`, `MultiplayerOnly` или `SingleplayerOnly`).
 - `coop_only`: вычисляется как `multiplayer_constraint = MultiplayerOnly`; именно его использует приложение для исключения кооперативных карт.
+- `solo_only`: вычисляется как `multiplayer_constraint = SingleplayerOnly`; позволяет исключить недоступные в кооперативе карты, включая `well_laid_plans`.
 - unlock/epoch: отдельные метаданные доступности, если понадобятся позже.
 - `card_challenge_settings.eligible`: только ручное правило конкретного челленджа; импорт контента не должен его перезаписывать.
 

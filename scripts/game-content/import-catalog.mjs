@@ -10,7 +10,7 @@ const TYPES = new Set(["Attack", "Skill", "Power", "Status", "Curse", "Quest", "
 const RARITIES = new Set(["ancient", "basic", "common", "curse", "event", "quest", "rare", "status", "token", "uncommon"]);
 const POOLS = new Set(["ironclad", "silent", "regent", "necrobinder", "defect", "colorless", "status", "curse", "event", "quest", "token", "deprecated"]);
 const CONSTRAINTS = new Set(["None", "MultiplayerOnly", "SingleplayerOnly"]);
-const CARD_FIELDS = ["source_id", "character_id", "card_color", "type", "rarity", "active", "in_canonical_pool", "show_in_card_library", "multiplayer_constraint"];
+const CARD_FIELDS = ["source_id", "character_id", "card_color", "type", "rarity", "active", "in_canonical_pool", "show_in_card_library", "multiplayer_constraint", "solo_only"];
 
 function parseArgs(argv) {
   const result = { apply: false, force: false, validateOnly: false, catalog: "/tmp/spire2codex-catalog.json" };
@@ -41,6 +41,7 @@ async function loadLocalEnv() {
 }
 
 function validate(snapshot) {
+  if (snapshot?.schemaVersion !== 2) throw new Error(`Unsupported catalog schema version: ${snapshot?.schemaVersion}`);
   if (snapshot?.complete !== true) throw new Error("Catalog snapshot is not complete");
   if (!snapshot.source?.gameVersion || !snapshot.source?.commit) throw new Error("Catalog source version/commit is missing");
   if (!Array.isArray(snapshot.cards) || snapshot.cards.length === 0) throw new Error("Catalog contains no cards");
@@ -55,6 +56,7 @@ function validate(snapshot) {
     if (!RARITIES.has(card.rarity)) throw new Error(`Unknown rarity for ${card.id}: ${card.rarity}`);
     if (!CONSTRAINTS.has(card.multiplayerConstraint)) throw new Error(`Unknown multiplayer constraint for ${card.id}`);
     if (card.coopOnly !== (card.multiplayerConstraint === "MultiplayerOnly")) throw new Error(`Invalid coopOnly for ${card.id}`);
+    if (card.soloOnly !== (card.multiplayerConstraint === "SingleplayerOnly")) throw new Error(`Invalid soloOnly for ${card.id}`);
     if (!Array.isArray(card.poolIds) || card.poolIds.some((pool) => !POOLS.has(pool))) throw new Error(`Invalid pools for ${card.id}`);
     for (const locale of ["en", "ru"]) {
       if (!card.translations?.[locale]?.name) throw new Error(`Missing ${locale} name for ${card.id}`);
@@ -84,6 +86,7 @@ function expectedCard(card) {
     in_canonical_pool: card.inCanonicalPool,
     show_in_card_library: card.showInCardLibrary,
     multiplayer_constraint: card.multiplayerConstraint,
+    solo_only: card.soloOnly,
   };
 }
 
@@ -109,6 +112,7 @@ if (args.validateOnly) {
     active: snapshot.cards.filter((card) => card.active).length,
     inactive: snapshot.cards.filter((card) => !card.active).length,
     coopOnly: snapshot.cards.filter((card) => card.coopOnly).length,
+    soloOnly: snapshot.cards.filter((card) => card.soloOnly).length,
   }, null, 2));
   process.exit(0);
 }
@@ -169,6 +173,7 @@ const summary = {
   incoming: snapshot.cards.length,
   active: snapshot.cards.filter((card) => card.active).length,
   coopOnly: snapshot.cards.filter((card) => card.coopOnly).length,
+  soloOnly: snapshot.cards.filter((card) => card.soloOnly).length,
   added: added.length,
   changed: changed.length,
   translationsChanged: translationChanges,

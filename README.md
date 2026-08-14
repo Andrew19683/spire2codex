@@ -85,7 +85,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 
 - поддерживает фактические игровые type/rarity, включая Status, Curse, Quest, Ancient и Token;
 - хранит исходный игровой ID и признаки канонического пула/показа в библиотеке;
-- хранит игровое multiplayer-ограничение и вычисляемый признак `coop_only`;
+- хранит игровое multiplayer-ограничение и вычисляемые признаки `coop_only` и `solo_only`;
 - добавляет `card_pools` и many-to-many `card_pool_memberships` для character, colorless, status, curse, event, quest и token карт;
 - принимает BCP 47 locale с числовым регионом, включая `es-419`.
 
