@@ -17,6 +17,7 @@ and optionally set `NEXT_PUBLIC_BRAND_LOGO_ALT` to update its accessible label.
 - серверные игровые данные аккаунта защищены RLS и доступны только владельцу;
 - username хранится в публичной таблице `profiles` и отображается после входа;
 - demo-режим хранит данные только в `localStorage`. Demo-данные никогда автоматически не переносятся в аккаунт.
+- соло-челлендж Card Mastery с выбором карт, прогрессом A1–A10, историей попыток и картой освоения; прогресс Card Mastery доступен после входа в аккаунт.
 
 ## Локальный запуск
 
@@ -89,6 +90,14 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 - добавляет `card_pools` и many-to-many `card_pool_memberships` для character, colorless, status, curse, event, quest и token карт;
 - принимает BCP 47 locale с числовым регионом, включая `es-419`.
 
+Миграция `20260815120000_card_mastery.sql` добавляет Card Mastery:
+
+- `card_mastery_state` — сохранённое текущее Вознесение, активная цель и состояние завершения без пересчёта каталога на главной;
+- `card_mastery_progress` — одна запись на пару пользователь/стабильный `card_id` с максимальным освоенным Вознесением;
+- `card_mastery_attempts` — неизменяемая история результатов для статистики;
+- RLS на чтение только собственных данных и атомарные RPC для начала/завершения попытки;
+- service-role RPC для явной проверки завершённости после изменения состава каталога.
+
 Удалять строки игрового каталога не следует: для выведенного из игры контента установите `active = false`. Новые и изменённые записи добавляйте отдельной миграцией с `insert ... on conflict ... do update`, чтобы окружения получали одинаковую версию каталога.
 
 ## Vercel
@@ -158,6 +167,14 @@ SUPABASE_SERVICE_ROLE_KEY="..." npm run content:import -- --apply
 
 Не сохраняйте service-role key в `NEXT_PUBLIC_*`, клиентском коде, Git или Vercel. Импорт выполняется одной серверной транзакцией; отсутствующие карты помечаются inactive, memberships синхронизируются, а `card_challenge_settings` не изменяется. Если импорт пытается уменьшить число активных карт более чем на 30%, RPC останавливается; осознанный override доступен через `--apply --force`.
 
+После успешного импорта или ручного изменения `active`/Card Mastery eligibility отдельно пересчитайте сохранённое состояние пользователей:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY="..." npm run card-mastery:reconcile
+```
+
+Команда снимает актуальный `completed`, если появились новые/вернувшиеся карты, сохраняет исторические даты прохождения и обновляет число дополнительных карт. Service-role key передавайте только процессу команды.
+
 ## Архитектура хранения
 
 - `src/domain` — предметная логика и валидация;
@@ -166,5 +183,6 @@ SUPABASE_SERVICE_ROLE_KEY="..." npm run content:import -- --apply
 - `SupabaseUserDataRepository` — данные вошедшего пользователя в `public.user_data`;
 - `src/storage/supabase/client.ts` — браузерный клиент Supabase на publishable key.
 - `src/storage/contentRepository.ts` — чтение активных персонажей и локализаций из Supabase; при отсутствии выбранного перевода используется английский.
+- `src/domain/cardMastery.ts` и `src/storage/cardMasteryRepository.ts` — выбор целей, статистика и доступ к нормализованным данным Card Mastery; изменяемый текст карты всегда читается из каталога по стабильному `card_id`.
 
 Выбор аккаунта не читает demo-хранилище, поэтому неявной миграции локальных данных нет.

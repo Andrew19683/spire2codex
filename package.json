@@ -12,6 +12,7 @@
     "content:extract": "node scripts/game-content/extract-game-content.mjs",
     "content:runtime:install": "node scripts/game-content/install-runtime-exporter.mjs",
     "content:import": "node scripts/game-content/import-catalog.mjs",
+    "card-mastery:reconcile": "node scripts/reconcile-card-mastery.mjs",
     "supabase:migrations": "supabase migration list",
     "supabase:push": "node scripts/supabase-db-push.mjs",
     "supabase:push:trace": "node scripts/supabase-db-push.mjs --log-level trace"
