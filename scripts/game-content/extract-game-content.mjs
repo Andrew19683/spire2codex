@@ -64,6 +64,7 @@ function normalizeRuntimeCard(card) {
     poolIds: pools.map((pool) => pool.id).sort(),
     active: !pools.some((pool) => pool.id === "deprecated"),
     coopOnly: card.multiplayerConstraint === "MultiplayerOnly",
+    soloOnly: card.multiplayerConstraint === "SingleplayerOnly",
   };
 }
 
@@ -162,7 +163,7 @@ for (const sourceId of [...sourceIds].sort()) {
 }
 
 const catalog = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   source: {
     kind: "game-distribution",
     gameVersion: release.version,
@@ -185,5 +186,7 @@ console.log(JSON.stringify({
   cards: cards.length,
   locales: [...new Set(cards.flatMap((card) => Object.keys(card.translations)))].sort(),
   complete: catalog.complete,
+  coopOnly: cards.filter((card) => card.coopOnly).length,
+  soloOnly: cards.filter((card) => card.soloOnly).length,
   sha256: createHash("sha256").update(body).digest("hex"),
 }, null, 2));
