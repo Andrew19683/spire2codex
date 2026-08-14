@@ -1,0 +1,164 @@
+import { CharacterId } from "./types";
+
+export const CARD_MASTERY_CHALLENGE_ID = "card_mastery";
+
+export type CardMasteryCard = {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  rarity: string;
+  characterId: CharacterId | null;
+  poolId: string;
+  active: boolean;
+  coopOnly: boolean;
+  soloOnly: boolean;
+  eligible: boolean;
+};
+
+export type CardMasteryProgress = {
+  cardId: string;
+  maxMasteredAscension: number;
+  firstMasteredAt: string | null;
+  lastMasteredAt: string | null;
+};
+
+export type CardMasteryState = {
+  currentAscension: number;
+  activeCardId: string | null;
+  selectedCharacterId: CharacterId | null;
+  activeAttemptStartedAt: string | null;
+  completed: boolean;
+  firstCompletedAt: string | null;
+  lastCompletedAt: string | null;
+  additionalCardsCount: number;
+};
+
+export type CardMasteryResult = "mastered" | "won_not_found" | "lost";
+
+export type CardMasteryAttempt = {
+  id: string;
+  cardId: string;
+  ascension: number;
+  characterId: CharacterId;
+  result: CardMasteryResult;
+  cardFound: boolean;
+  mastered: boolean;
+  startedAt: string;
+  finishedAt: string;
+};
+
+export type CardMasteryPoolStat = {
+  poolId: string;
+  total: number;
+  masteredA10: number;
+  percentA10: number;
+  ascensions: number[];
+};
+
+export type CardMasteryStats = {
+  totalCards: number;
+  masteredA10: number;
+  percentA10: number;
+  masteredAtCurrent: number;
+  poolStats: CardMasteryPoolStat[];
+};
+
+export function availableCards(
+  cards: CardMasteryCard[],
+  progress: CardMasteryProgress[],
+  ascension: number,
+) {
+  const mastered = new Map(progress.map((item) => [item.cardId, item.maxMasteredAscension]));
+  return cards.filter((card) =>
+    card.active && card.eligible && !card.coopOnly && (mastered.get(card.id) ?? 0) < ascension,
+  );
+}
+
+function sample<T>(items: T[], random: () => number) {
+  if (!items.length) return null;
+  return items[Math.min(items.length - 1, Math.floor(random() * items.length))];
+}
+
+function shuffled<T>(items: T[], random: () => number) {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index -= 1) {
+    const swap = Math.floor(random() * (index + 1));
+    [copy[index], copy[swap]] = [copy[swap], copy[index]];
+  }
+  return copy;
+}
+
+/** Prefer one Colorless card and cards from two different characters. */
+export function createCardOffer(
+  cards: CardMasteryCard[],
+  progress: CardMasteryProgress[],
+  ascension: number,
+  random: () => number = Math.random,
+) {
+  const remaining = availableCards(cards, progress, ascension);
+  if (remaining.length <= 3) return shuffled(remaining, random);
+
+  const colorless = remaining.filter((card) => card.poolId === "colorless");
+  const characterCards = remaining.filter((card) => card.characterId);
+  const characterIds = [...new Set(characterCards.map((card) => card.characterId!))];
+  const firstCharacter = sample(characterIds, random);
+  const secondCharacter = sample(characterIds.filter((id) => id !== firstCharacter), random);
+
+  if (colorless.length && firstCharacter && secondCharacter) {
+    return [
+      sample(colorless, random)!,
+      sample(characterCards.filter((card) => card.characterId === firstCharacter), random)!,
+      sample(characterCards.filter((card) => card.characterId === secondCharacter), random)!,
+    ];
+  }
+
+  return shuffled(remaining, random).slice(0, 3);
+}
+
+export function calculateCardMasteryStats(
+  cards: CardMasteryCard[],
+  progress: CardMasteryProgress[],
+  currentAscension: number,
+): CardMasteryStats {
+  const eligible = cards.filter((card) => card.active && card.eligible && !card.coopOnly);
+  const levels = new Map(progress.map((item) => [item.cardId, item.maxMasteredAscension]));
+  const masteredA10 = eligible.filter((card) => (levels.get(card.id) ?? 0) >= 10).length;
+  const pools = [...new Set(eligible.map((card) => card.poolId))];
+  const poolStats = pools.map((poolId) => {
+    const poolCards = eligible.filter((card) => card.poolId === poolId);
+    const poolMastered = poolCards.filter((card) => (levels.get(card.id) ?? 0) >= 10).length;
+    return {
+      poolId,
+      total: poolCards.length,
+      masteredA10: poolMastered,
+      percentA10: poolCards.length ? poolMastered / poolCards.length * 100 : 0,
+      ascensions: Array.from({ length: 10 }, (_, index) => {
+        const level = index + 1;
+        return poolCards.length
+          ? poolCards.filter((card) => (levels.get(card.id) ?? 0) >= level).length / poolCards.length * 100
+          : 0;
+      }),
+    };
+  });
+  return {
+    totalCards: eligible.length,
+    masteredA10,
+    percentA10: eligible.length ? masteredA10 / eligible.length * 100 : 0,
+    masteredAtCurrent: eligible.filter((card) => (levels.get(card.id) ?? 0) >= currentAscension).length,
+    poolStats,
+  };
+}
+
+export function emptyCardMasteryState(): CardMasteryState {
+  return {
+    currentAscension: 1,
+    activeCardId: null,
+    selectedCharacterId: null,
+    activeAttemptStartedAt: null,
+    completed: false,
+    firstCompletedAt: null,
+    lastCompletedAt: null,
+    additionalCardsCount: 0,
+  };
+}

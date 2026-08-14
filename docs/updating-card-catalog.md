@@ -112,7 +112,17 @@ npm run content:import -- --apply --force
 unset SUPABASE_SERVICE_ROLE_KEY
 ```
 
-### 7. Убедиться, что всё применилось
+### 7. Пересчитать завершённость Card Mastery
+
+Импорт намеренно не изменяет ручную Card Mastery eligibility и не пересчитывает состояние всех пользователей. После успешного импорта выполните отдельную операцию:
+
+```bash
+npm run card-mastery:reconcile
+```
+
+Команда использует уже заданный для импорта `SUPABASE_SERVICE_ROLE_KEY`. Она учитывает новые, возвращённые и деактивированные карты, при необходимости снимает текущий статус «Пройден» и сохраняет исторические даты прохождения.
+
+### 8. Убедиться, что всё применилось
 
 Повторно выполнить dry-run:
 
@@ -151,5 +161,6 @@ unset SUPABASE_SERVICE_ROLE_KEY
 6. npm run content:import
 7. Проверить diff.
 8. npm run content:import -- --apply с временно заданным service-role key.
-9. Снова npm run content:import и убедиться, что diff пустой.
+9. npm run card-mastery:reconcile с тем же временным ключом.
+10. Снова npm run content:import и убедиться, что diff пустой.
 ```
