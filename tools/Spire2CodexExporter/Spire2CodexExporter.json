@@ -1,0 +1,12 @@
+{
+  "id": "Spire2CodexExporter",
+  "name": "Spire2Codex Catalog Exporter",
+  "author": "Spire2Codex",
+  "description": "Exports the built-in card catalog to a local JSON file.",
+  "version": "0.1.0",
+  "has_pck": false,
+  "has_dll": true,
+  "affects_gameplay": false,
+  "min_game_version": "0.107.0"
+}
+
