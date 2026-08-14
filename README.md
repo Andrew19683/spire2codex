@@ -41,11 +41,11 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 
 ## Настройка Supabase
 
-1. Свяжите проект с Supabase CLI и примените миграции:
+1. Свяжите проект с Supabase CLI и примените миграции. Проектный npm-скрипт использует IPv4-compatible Supavisor session pooler и безопасно запрашивает database password:
 
    ```bash
    supabase link --project-ref YOUR_PROJECT_REF
-   supabase db push
+   npm run supabase:push
    ```
 
    Альтернатива для нового проекта: откройте SQL Editor и последовательно целиком выполните все файлы из `supabase/migrations` в порядке их имён. Не вносите отдельные части схемы вручную: миграции являются источником истины.
@@ -81,6 +81,14 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 - публичное чтение каталога через RLS без разрешения клиентской записи;
 - начальный английский каталог персонажей и динамическую проверку персонажей в co-op RPC.
 
+Миграция `20260813000000_expand_card_catalog.sql` расширяет каталог для полной модели игры:
+
+- поддерживает фактические игровые type/rarity, включая Status, Curse, Quest, Ancient и Token;
+- хранит исходный игровой ID и признаки канонического пула/показа в библиотеке;
+- хранит игровое multiplayer-ограничение и вычисляемый признак `coop_only`;
+- добавляет `card_pools` и many-to-many `card_pool_memberships` для character, colorless, status, curse, event, quest и token карт;
+- принимает BCP 47 locale с числовым регионом, включая `es-419`.
+
 Удалять строки игрового каталога не следует: для выведенного из игры контента установите `active = false`. Новые и изменённые записи добавляйте отдельной миграцией с `insert ... on conflict ... do update`, чтобы окружения получали одинаковую версию каталога.
 
 ## Vercel
@@ -100,6 +108,55 @@ npm run typecheck
 npm test
 npm run build
 ```
+
+## Извлечение игрового каталога
+
+Полная пошаговая инструкция для обновления после выхода новой версии игры: [docs/updating-card-catalog.md](docs/updating-card-catalog.md).
+
+Первый этап импортёра читает `release_info.json` и английскую/русскую локализации непосредственно из Godot PCK:
+
+```bash
+npm run content:extract -- \
+  --output /tmp/spire2codex-catalog.json
+```
+
+На macOS стандартная Steam-установка определяется автоматически. Для другой Steam library передайте полный каталог `SlayTheSpire2.app/Contents/Resources` через `--game-dir`.
+
+Без runtime-export метаданных snapshot намеренно получает `complete: false`, поэтому его нельзя применять с деактивацией отсутствующих карт. После добавления игрового экспортёра передайте его результат через `--runtime-export /path/to/cards.json`.
+
+Для получения runtime-метаданных на macOS нужен .NET 9 SDK. Установите и соберите информационный мод:
+
+```bash
+brew install dotnet@9
+npm run content:runtime:install
+```
+
+Затем запустите игру, разрешите моды и включите **Spire2Codex Catalog Exporter** в **Settings → Mod Settings**. После одного перезапуска игры exporter создаст `spire2codex-runtime-cards.json` в системном временном каталоге. Повторный `npm run content:extract -- --output /tmp/spire2codex-catalog.json` подхватит этот файл автоматически и создаст полный snapshot.
+
+### Импорт в Supabase
+
+Сначала примените миграции и локально проверьте полный snapshot:
+
+```bash
+npm run supabase:push
+npm run content:import -- --validate-only
+```
+
+`supabase:push` спрашивает database password интерактивно и не выводит его. Для CI используйте `SUPABASE_DB_PASSWORD`, не добавляя значение в Git или `NEXT_PUBLIC_*`.
+
+Dry-run читает текущий каталог по публичному ключу из `.env.local` и показывает added/changed/deactivated без записи:
+
+```bash
+npm run content:import
+```
+
+После проверки diff передайте service-role key только процессу импортёра и явно разрешите запись:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY="..." npm run content:import -- --apply
+```
+
+Не сохраняйте service-role key в `NEXT_PUBLIC_*`, клиентском коде, Git или Vercel. Импорт выполняется одной серверной транзакцией; отсутствующие карты помечаются inactive, memberships синхронизируются, а `card_challenge_settings` не изменяется. Если импорт пытается уменьшить число активных карт более чем на 30%, RPC останавливается; осознанный override доступен через `--apply --force`.
 
 ## Архитектура хранения
 

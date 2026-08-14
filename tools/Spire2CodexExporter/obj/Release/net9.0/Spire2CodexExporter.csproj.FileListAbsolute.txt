@@ -1,0 +1,13 @@
+/Users/aagavrilov/Projects/Pet/Spire2Codex/tools/Spire2CodexExporter/obj/Release/net9.0/Spire2CodexExporter.csproj.AssemblyReference.cache
+/Users/aagavrilov/Projects/Pet/Spire2Codex/tools/Spire2CodexExporter/obj/Release/net9.0/Spire2CodexExporter.GeneratedMSBuildEditorConfig.editorconfig
+/Users/aagavrilov/Projects/Pet/Spire2Codex/tools/Spire2CodexExporter/obj/Release/net9.0/Spire2CodexExporter.AssemblyInfoInputs.cache
+/Users/aagavrilov/Projects/Pet/Spire2Codex/tools/Spire2CodexExporter/obj/Release/net9.0/Spire2CodexExporter.AssemblyInfo.cs
+/Users/aagavrilov/Projects/Pet/Spire2Codex/tools/Spire2CodexExporter/obj/Release/net9.0/Spire2CodexExporter.csproj.CoreCompileInputs.cache
+/Users/aagavrilov/Projects/Pet/Spire2Codex/tools/Spire2CodexExporter/obj/Release/net9.0/Spire2CodexExporter.sourcelink.json
+/Users/aagavrilov/Projects/Pet/Spire2Codex/.generated/Spire2CodexExporter/Spire2CodexExporter.deps.json
+/Users/aagavrilov/Projects/Pet/Spire2Codex/.generated/Spire2CodexExporter/Spire2CodexExporter.dll
+/Users/aagavrilov/Projects/Pet/Spire2Codex/.generated/Spire2CodexExporter/Spire2CodexExporter.pdb
+/Users/aagavrilov/Projects/Pet/Spire2Codex/tools/Spire2CodexExporter/obj/Release/net9.0/Spire2CodexExporter.dll
+/Users/aagavrilov/Projects/Pet/Spire2Codex/tools/Spire2CodexExporter/obj/Release/net9.0/refint/Spire2CodexExporter.dll
+/Users/aagavrilov/Projects/Pet/Spire2Codex/tools/Spire2CodexExporter/obj/Release/net9.0/Spire2CodexExporter.pdb
+/Users/aagavrilov/Projects/Pet/Spire2Codex/tools/Spire2CodexExporter/obj/Release/net9.0/ref/Spire2CodexExporter.dll
