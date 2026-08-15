@@ -30,6 +30,11 @@ describe("Card Mastery offers", () => {
       card("coop", "silent", { coopOnly: true }),
       card("disabled", "silent", { eligible: false }),
       card("event", null, { poolId: "event" }),
+      card("starter", "silent", { rarity: "basic" }),
+      card("curse", null, { poolId: "curse", rarity: "curse" }),
+      card("status", null, { poolId: "status", rarity: "status" }),
+      card("quest", null, { poolId: "quest", rarity: "quest" }),
+      card("token", null, { poolId: "token", rarity: "token" }),
       card("mastered", "silent"),
     ];
     const progress = [{ cardId: "mastered", maxMasteredAscension: 5, firstMasteredAt: null, lastMasteredAt: null }];
@@ -40,7 +45,12 @@ describe("Card Mastery offers", () => {
 
 describe("Card Mastery stats", () => {
   it("calculates overall, pool and ascension progress", () => {
-    const cards = [card("a", "ironclad"), card("b", "ironclad"), card("c", null), card("event", null, { poolId: "event" })];
+    const cards = [
+      card("a", "ironclad"), card("b", "ironclad"), card("c", null),
+      card("event", null, { poolId: "event", rarity: "event" }),
+      card("starter", "silent", { rarity: "basic" }),
+      card("status", null, { poolId: "status", rarity: "status" }),
+    ];
     const progress = [
       { cardId: "a", maxMasteredAscension: 10, firstMasteredAt: null, lastMasteredAt: null },
       { cardId: "c", maxMasteredAscension: 5, firstMasteredAt: null, lastMasteredAt: null },

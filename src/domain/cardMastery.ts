@@ -9,10 +9,12 @@ export const CARD_MASTERY_POOL_ORDER = [
   "defect",
   "colorless",
 ] as const;
+const CARD_MASTERY_EXCLUDED_RARITIES = new Set(["basic", "curse", "event", "quest", "status", "token"]);
 
-export function isCardMasteryPool(card: Pick<CardMasteryCard, "characterId" | "poolId">) {
+export function isCardMasteryCatalogCard(card: Pick<CardMasteryCard, "characterId" | "poolId" | "rarity">) {
   const poolId = card.characterId ?? card.poolId;
-  return (CARD_MASTERY_POOL_ORDER as readonly string[]).includes(poolId);
+  return (CARD_MASTERY_POOL_ORDER as readonly string[]).includes(poolId)
+    && !CARD_MASTERY_EXCLUDED_RARITIES.has(card.rarity);
 }
 
 export type CardMasteryCard = {
@@ -84,7 +86,7 @@ export function availableCards(
 ) {
   const mastered = new Map(progress.map((item) => [item.cardId, item.maxMasteredAscension]));
   return cards.filter((card) =>
-    card.active && card.eligible && !card.coopOnly && isCardMasteryPool(card)
+    card.active && card.eligible && !card.coopOnly && isCardMasteryCatalogCard(card)
       && (mastered.get(card.id) ?? 0) < ascension,
   );
 }
@@ -135,7 +137,7 @@ export function calculateCardMasteryStats(
   progress: CardMasteryProgress[],
   currentAscension: number,
 ): CardMasteryStats {
-  const eligible = cards.filter((card) => card.active && card.eligible && !card.coopOnly && isCardMasteryPool(card));
+  const eligible = cards.filter((card) => card.active && card.eligible && !card.coopOnly && isCardMasteryCatalogCard(card));
   const levels = new Map(progress.map((item) => [item.cardId, item.maxMasteredAscension]));
   const masteredA10 = eligible.filter((card) => (levels.get(card.id) ?? 0) >= 10).length;
   const poolStats = CARD_MASTERY_POOL_ORDER.map((poolId) => {
