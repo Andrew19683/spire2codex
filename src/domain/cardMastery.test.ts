@@ -29,6 +29,7 @@ describe("Card Mastery offers", () => {
       card("inactive", "silent", { active: false }),
       card("coop", "silent", { coopOnly: true }),
       card("disabled", "silent", { eligible: false }),
+      card("event", null, { poolId: "event" }),
       card("mastered", "silent"),
     ];
     const progress = [{ cardId: "mastered", maxMasteredAscension: 5, firstMasteredAt: null, lastMasteredAt: null }];
@@ -39,14 +40,20 @@ describe("Card Mastery offers", () => {
 
 describe("Card Mastery stats", () => {
   it("calculates overall, pool and ascension progress", () => {
-    const cards = [card("a", "ironclad"), card("b", "ironclad"), card("c", null)];
+    const cards = [card("a", "ironclad"), card("b", "ironclad"), card("c", null), card("event", null, { poolId: "event" })];
     const progress = [
       { cardId: "a", maxMasteredAscension: 10, firstMasteredAt: null, lastMasteredAt: null },
       { cardId: "c", maxMasteredAscension: 5, firstMasteredAt: null, lastMasteredAt: null },
     ];
     const stats = calculateCardMasteryStats(cards, progress, 5);
     expect(stats.masteredA10).toBe(1);
+    expect(stats.totalCards).toBe(3);
     expect(stats.masteredAtCurrent).toBe(2);
+    expect(stats.poolStats.map((item) => item.poolId)).toEqual([
+      "ironclad", "silent", "regent", "necrobinder", "defect", "colorless",
+    ]);
+    expect(stats.poolStats).toHaveLength(6);
+    expect(stats.poolStats.some((item) => item.poolId === "event")).toBe(false);
     expect(stats.poolStats.find((item) => item.poolId === "ironclad")?.percentA10).toBe(50);
     expect(stats.poolStats.find((item) => item.poolId === "colorless")?.ascensions[4]).toBe(100);
   });

@@ -1,6 +1,19 @@
 import { CharacterId } from "./types";
 
 export const CARD_MASTERY_CHALLENGE_ID = "card_mastery";
+export const CARD_MASTERY_POOL_ORDER = [
+  "ironclad",
+  "silent",
+  "regent",
+  "necrobinder",
+  "defect",
+  "colorless",
+] as const;
+
+export function isCardMasteryPool(card: Pick<CardMasteryCard, "characterId" | "poolId">) {
+  const poolId = card.characterId ?? card.poolId;
+  return (CARD_MASTERY_POOL_ORDER as readonly string[]).includes(poolId);
+}
 
 export type CardMasteryCard = {
   id: string;
@@ -71,7 +84,8 @@ export function availableCards(
 ) {
   const mastered = new Map(progress.map((item) => [item.cardId, item.maxMasteredAscension]));
   return cards.filter((card) =>
-    card.active && card.eligible && !card.coopOnly && (mastered.get(card.id) ?? 0) < ascension,
+    card.active && card.eligible && !card.coopOnly && isCardMasteryPool(card)
+      && (mastered.get(card.id) ?? 0) < ascension,
   );
 }
 
@@ -121,12 +135,11 @@ export function calculateCardMasteryStats(
   progress: CardMasteryProgress[],
   currentAscension: number,
 ): CardMasteryStats {
-  const eligible = cards.filter((card) => card.active && card.eligible && !card.coopOnly);
+  const eligible = cards.filter((card) => card.active && card.eligible && !card.coopOnly && isCardMasteryPool(card));
   const levels = new Map(progress.map((item) => [item.cardId, item.maxMasteredAscension]));
   const masteredA10 = eligible.filter((card) => (levels.get(card.id) ?? 0) >= 10).length;
-  const pools = [...new Set(eligible.map((card) => card.poolId))];
-  const poolStats = pools.map((poolId) => {
-    const poolCards = eligible.filter((card) => card.poolId === poolId);
+  const poolStats = CARD_MASTERY_POOL_ORDER.map((poolId) => {
+    const poolCards = eligible.filter((card) => (card.characterId ?? card.poolId) === poolId);
     const poolMastered = poolCards.filter((card) => (levels.get(card.id) ?? 0) >= 10).length;
     return {
       poolId,
