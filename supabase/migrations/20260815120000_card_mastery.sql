@@ -76,7 +76,8 @@ as $$
     where c.id = target_card_id
       and c.active
       and not c.coop_only
-      and c.rarity not in ('basic', 'curse', 'event', 'quest', 'status', 'token')
+      and c.type in ('Attack', 'Skill', 'Power')
+      and c.rarity in ('common', 'uncommon', 'rare')
       and (
         c.character_id in ('ironclad', 'silent', 'regent', 'necrobinder', 'defect')
         or exists (

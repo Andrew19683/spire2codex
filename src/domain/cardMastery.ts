@@ -9,12 +9,14 @@ export const CARD_MASTERY_POOL_ORDER = [
   "defect",
   "colorless",
 ] as const;
-const CARD_MASTERY_EXCLUDED_RARITIES = new Set(["basic", "curse", "event", "quest", "status", "token"]);
+const CARD_MASTERY_TYPES = new Set(["Attack", "Skill", "Power"]);
+const CARD_MASTERY_RARITIES = new Set(["common", "uncommon", "rare"]);
 
-export function isCardMasteryCatalogCard(card: Pick<CardMasteryCard, "characterId" | "poolId" | "rarity">) {
+export function isCardMasteryCatalogCard(card: Pick<CardMasteryCard, "characterId" | "poolId" | "type" | "rarity">) {
   const poolId = card.characterId ?? card.poolId;
   return (CARD_MASTERY_POOL_ORDER as readonly string[]).includes(poolId)
-    && !CARD_MASTERY_EXCLUDED_RARITIES.has(card.rarity);
+    && CARD_MASTERY_TYPES.has(card.type)
+    && CARD_MASTERY_RARITIES.has(card.rarity);
 }
 
 export type CardMasteryCard = {

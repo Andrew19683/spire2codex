@@ -35,6 +35,8 @@ describe("Card Mastery offers", () => {
       card("status", null, { poolId: "status", rarity: "status" }),
       card("quest", null, { poolId: "quest", rarity: "quest" }),
       card("token", null, { poolId: "token", rarity: "token" }),
+      card("ancient", "silent", { rarity: "ancient" }),
+      card("special-type", "silent", { type: "Status" }),
       card("mastered", "silent"),
     ];
     const progress = [{ cardId: "mastered", maxMasteredAscension: 5, firstMasteredAt: null, lastMasteredAt: null }];
@@ -50,6 +52,7 @@ describe("Card Mastery stats", () => {
       card("event", null, { poolId: "event", rarity: "event" }),
       card("starter", "silent", { rarity: "basic" }),
       card("status", null, { poolId: "status", rarity: "status" }),
+      card("ancient", "silent", { rarity: "ancient" }),
     ];
     const progress = [
       { cardId: "a", maxMasteredAscension: 10, firstMasteredAt: null, lastMasteredAt: null },

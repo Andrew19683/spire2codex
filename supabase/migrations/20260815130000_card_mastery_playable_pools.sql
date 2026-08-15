@@ -1,6 +1,7 @@
--- Card Mastery includes only non-starter, non-special cards from the five
--- playable character pools and Colorless. MultiplayerOnly is excluded by
--- the generated coop_only flag.
+-- Card Mastery includes only battle/shop reward card types and rarities from
+-- the five playable character pools and Colorless. This strict allowlist also
+-- excludes starter/basic, Ancient and every special category. MultiplayerOnly
+-- is excluded by the generated coop_only flag.
 -- Keep this as a follow-up migration so environments that already tested the
 -- initial Card Mastery migration receive the corrected eligibility predicate.
 
@@ -17,7 +18,8 @@ as $$
     where c.id = target_card_id
       and c.active
       and not c.coop_only
-      and c.rarity not in ('basic', 'curse', 'event', 'quest', 'status', 'token')
+      and c.type in ('Attack', 'Skill', 'Power')
+      and c.rarity in ('common', 'uncommon', 'rare')
       and (
         c.character_id in ('ironclad', 'silent', 'regent', 'necrobinder', 'defect')
         or exists (
