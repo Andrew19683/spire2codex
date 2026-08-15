@@ -76,6 +76,15 @@ as $$
     where c.id = target_card_id
       and c.active
       and not c.coop_only
+      and c.type in ('Attack', 'Skill', 'Power')
+      and c.rarity in ('common', 'uncommon', 'rare')
+      and (
+        c.character_id in ('ironclad', 'silent', 'regent', 'necrobinder', 'defect')
+        or exists (
+          select 1 from public.card_pool_memberships membership
+          where membership.card_id = c.id and membership.pool_id = 'colorless'
+        )
+      )
       and coalesce((
         select s.eligible
         from public.card_challenge_settings s
