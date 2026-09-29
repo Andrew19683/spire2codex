@@ -1,5 +1,6 @@
 import {
   CardMasteryAttempt,
+  CardMasteryAttemptStat,
   CardMasteryCard,
   CardMasteryProgress,
   CardMasteryResult,
@@ -34,6 +35,28 @@ export type CardMasterySnapshot = {
   cards: CardMasteryCard[];
   progress: CardMasteryProgress[];
   attempts: CardMasteryAttempt[];
+  attemptStats: CardMasteryAttemptStat[];
+};
+
+type SnapshotRow = {
+  state: StateRow;
+  cards: Array<{
+    id: string; name: string; description: string; type: string; rarity: string;
+    character_id: string | null; pool_id: string; active: boolean;
+    coop_only: boolean; solo_only: boolean; eligible: boolean;
+  }>;
+  progress: Array<{
+    card_id: string; max_mastered_ascension: number;
+    first_mastered_at: string | null; last_mastered_at: string | null;
+  }>;
+  attempts: Array<{
+    id: string; card_id: string; ascension: number; character_id: string;
+    result: CardMasteryResult; card_found: boolean; mastered: boolean;
+    started_at: string; finished_at: string;
+  }>;
+  attempt_stats: Array<{
+    card_id: string; attempts: number; mastered: number; lost: number; not_found: number;
+  }>;
 };
 
 export class CardMasteryRepository {
@@ -49,54 +72,27 @@ export class CardMasteryRepository {
   }
 
   async load(locale: "en" | "ru"): Promise<CardMasterySnapshot> {
-    const state = await this.state();
-
-    const locales = [...new Set([locale, "en"])] as string[];
-    const [cardsResult, translationsResult, settingsResult, membershipsResult, progressResult, attemptsResult] = await Promise.all([
-      this.client.from("cards").select("id, character_id, type, rarity, active, coop_only, solo_only"),
-      this.client.from("card_translations").select("card_id, locale, name, description").in("locale", locales),
-      this.client.from("card_challenge_settings").select("card_id, eligible").eq("challenge_id", "card_mastery"),
-      this.client.from("card_pool_memberships").select("card_id, pool_id"),
-      this.client.from("card_mastery_progress").select("card_id, max_mastered_ascension, first_mastered_at, last_mastered_at"),
-      this.client.from("card_mastery_attempts").select("id, card_id, ascension, character_id, result, card_found, mastered, started_at, finished_at").order("finished_at", { ascending: false }),
-    ]);
-    for (const result of [cardsResult, translationsResult, settingsResult, membershipsResult, progressResult, attemptsResult]) {
-      if (result.error) throw result.error;
-    }
-
-    const translations = new Map<string, { name: string; description: string }>();
-    for (const item of translationsResult.data ?? []) {
-      if (item.locale === "en") translations.set(item.card_id, { name: item.name, description: item.description });
-    }
-    for (const item of translationsResult.data ?? []) {
-      if (item.locale === locale) translations.set(item.card_id, { name: item.name, description: item.description });
-    }
-    const eligibility = new Map((settingsResult.data ?? []).map((item) => [item.card_id, item.eligible]));
-    const pools = new Map<string, string[]>();
-    for (const item of membershipsResult.data ?? []) pools.set(item.card_id, [...(pools.get(item.card_id) ?? []), item.pool_id]);
-
-    const cards: CardMasteryCard[] = (cardsResult.data ?? []).map((item) => {
-      const translation = translations.get(item.id) ?? { name: item.id, description: "" };
-      return {
-        id: item.id,
-        ...translation,
+    const response = await this.client.rpc("get_card_mastery_snapshot", { content_locale: locale });
+    if (response.error) throw response.error;
+    const row = response.data as SnapshotRow;
+    const cards: CardMasteryCard[] = row.cards.map((item) => ({
+        id: item.id, name: item.name, description: item.description,
         type: item.type,
         rarity: item.rarity,
         characterId: item.character_id,
-        poolId: item.character_id ?? (pools.get(item.id)?.includes("colorless") ? "colorless" : pools.get(item.id)?.[0] ?? "other"),
+        poolId: item.pool_id,
         active: item.active,
         coopOnly: item.coop_only,
         soloOnly: item.solo_only,
-        eligible: eligibility.get(item.id) ?? true,
-      };
-    });
-    const progress: CardMasteryProgress[] = (progressResult.data ?? []).map((item) => ({
+        eligible: item.eligible,
+      }));
+    const progress: CardMasteryProgress[] = row.progress.map((item) => ({
       cardId: item.card_id,
       maxMasteredAscension: item.max_mastered_ascension,
       firstMasteredAt: item.first_mastered_at,
       lastMasteredAt: item.last_mastered_at,
     }));
-    const attempts: CardMasteryAttempt[] = (attemptsResult.data ?? []).map((item) => ({
+    const attempts: CardMasteryAttempt[] = row.attempts.map((item) => ({
       id: item.id,
       cardId: item.card_id,
       ascension: item.ascension,
@@ -107,7 +103,14 @@ export class CardMasteryRepository {
       startedAt: item.started_at,
       finishedAt: item.finished_at,
     }));
-    return { state, cards, progress, attempts };
+    const attemptStats: CardMasteryAttemptStat[] = row.attempt_stats.map((item) => ({
+      cardId: item.card_id,
+      attempts: item.attempts,
+      mastered: item.mastered,
+      lost: item.lost,
+      notFound: item.not_found,
+    }));
+    return { state: stateFromRow(row.state), cards, progress, attempts, attemptStats };
   }
 
   async start(cardId: string, characterId: string) {

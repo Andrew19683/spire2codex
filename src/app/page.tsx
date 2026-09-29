@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   calculateStats,
   characterById,
@@ -192,6 +192,7 @@ function Login({
   );
 }
 export default function Home() {
+  const persistedDataRef = useRef(JSON.stringify(EMPTY));
   const [ready, setReady] = useState(false),
     [mode, setMode] = useState<"account" | "demo" | null>(null),
     [userId, setUserId] = useState(""),
@@ -237,7 +238,9 @@ export default function Home() {
       repo.load(),
     ]);
     if (profileError) throw profileError;
-    setData(saved ?? EMPTY);
+    const nextData = saved ?? EMPTY;
+    persistedDataRef.current = JSON.stringify(nextData);
+    setData(nextData);
     setUsername(profile.username);
     setUserId(userId);
     setRepository(repo);
@@ -269,8 +272,13 @@ export default function Home() {
 
   useEffect(() => {
     if (!ready || !repository || !mode) return;
+    const serialized = JSON.stringify(data);
+    if (serialized === persistedDataRef.current) return;
     const timeout = window.setTimeout(() => {
-      repository.save(data).then(() => setStorageError("")).catch((caught) => setStorageError(caught instanceof Error ? caught.message : "Не удалось сохранить данные."));
+      repository.save(data).then(() => {
+        persistedDataRef.current = serialized;
+        setStorageError("");
+      }).catch((caught) => setStorageError(caught instanceof Error ? caught.message : "Не удалось сохранить данные."));
     }, 250);
     return () => window.clearTimeout(timeout);
   }, [data, mode, ready, repository]);
@@ -293,6 +301,7 @@ export default function Home() {
       setCoopGroups([]);
       return;
     }
+    if (view !== "home" && view !== "coop") return;
     coopRepository.groups()
       .then((groups) => { if (active) setCoopGroups(groups); })
       .catch(() => { if (active) setCoopGroups([]); });
@@ -301,6 +310,7 @@ export default function Home() {
   useEffect(() => {
     let active = true;
     if (!coopMasterRepository) { setCoopMasterGroups([]); return; }
+    if (view !== "home" && view !== "coop-master-rotation") return;
     coopMasterRepository.groups().then((groups) => { if (active) setCoopMasterGroups(groups); }).catch(() => { if (active) setCoopMasterGroups([]); });
     return () => { active = false; };
   }, [coopMasterRepository, view]);
@@ -310,7 +320,9 @@ export default function Home() {
   if (!mode) return <Login onAuthenticated={activateAccount} onDemo={() => {
     const repo = new LocalStorageUserDataRepository();
     repo.load().then((saved) => {
-      setData(saved ?? EMPTY);
+      const nextData = saved ?? EMPTY;
+      persistedDataRef.current = JSON.stringify(nextData);
+      setData(nextData);
       setRepository(repo);
       setMode("demo");
     });

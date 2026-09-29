@@ -51,11 +51,7 @@ export class SupabaseUserDataRepository implements UserDataRepository {
   }
 
   async save(value: UserData): Promise<void> {
-    const { error } = await this.client.from("user_data").upsert({
-      user_id: this.userId,
-      data: value,
-      updated_at: new Date().toISOString(),
-    });
+    const { error } = await this.client.rpc("save_user_data_if_changed", { next_data: value });
     if (error) throw error;
   }
 }
