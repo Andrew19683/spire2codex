@@ -66,9 +66,11 @@ function character(id: CharacterId) {
 function Login({
   onDemo,
   onAuthenticated,
+  serviceError,
 }: {
   onDemo: () => void;
   onAuthenticated: (userId: string) => Promise<void>;
+  serviceError?: string;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -147,6 +149,7 @@ function Login({
         <p className="muted">
           Отмечай челленджи, следи за прогрессом и покоряй Шпиль.
         </p>
+        {serviceError && <div className="errorBanner">{serviceError}</div>}
         <form onSubmit={submit}>
           {screen === "register" && (
             <label>
@@ -196,6 +199,7 @@ function Login({
 }
 export default function Home() {
   const persistedDataRef = useRef(JSON.stringify(EMPTY));
+  const activationEpochRef = useRef(0);
   const [ready, setReady] = useState(false),
     [mode, setMode] = useState<"account" | "demo" | null>(null),
     [userId, setUserId] = useState(""),
@@ -233,6 +237,7 @@ export default function Home() {
     return () => { active = false; };
   }, [data.preferences.contentLocale]);
   const activateAccount = useCallback(async (userId: string) => {
+    const activationEpoch = ++activationEpochRef.current;
     const client = getSupabase();
     if (!client) return;
     const repo = new SupabaseUserDataRepository(client, userId);
@@ -241,6 +246,7 @@ export default function Home() {
       repo.load(),
     ]);
     if (profileError) throw profileError;
+    if (activationEpoch !== activationEpochRef.current) return;
     const nextData = saved ?? EMPTY;
     persistedDataRef.current = JSON.stringify(nextData);
     setData(nextData);
@@ -248,29 +254,43 @@ export default function Home() {
     setUserId(userId);
     setRepository(repo);
     setMode("account");
+    setStorageError("");
     setReady(true);
   }, []);
 
   useEffect(() => {
     const client = getSupabase();
     let active = true;
+    const startupTimeout = window.setTimeout(() => {
+      if (!active) return;
+      setStorageError("Supabase отвечает слишком долго. Можно повторить вход позже или открыть demo-режим.");
+      setReady(true);
+    }, 6_000);
     const restore = async () => {
-      if (client) {
-        const { data: { session } } = await client.auth.getSession();
-        if (session && active) {
-          try { await activateAccount(session.user.id); } catch (caught) {
-            if (active) setStorageError(caught instanceof Error ? caught.message : "Не удалось загрузить аккаунт.");
+      try {
+        if (client) {
+          const { data: { session } } = await client.auth.getSession();
+          if (session && active) {
+            await activateAccount(session.user.id);
           }
         }
+      } catch (caught) {
+        if (active) setStorageError(caught instanceof Error ? caught.message : "Не удалось подключиться к Supabase.");
+      } finally {
+        window.clearTimeout(startupTimeout);
+        if (active) setReady(true);
       }
-      if (active) setReady(true);
     };
     void restore();
     const subscription = client?.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session && active) void activateAccount(session.user.id);
-      if (event === "SIGNED_OUT" && active) { setMode(null); setRepository(null); setUsername(""); setUserId(""); setData(EMPTY); }
+      if (event === "SIGNED_IN" && session && active) {
+        void activateAccount(session.user.id).catch((caught) => {
+          if (active) setStorageError(caught instanceof Error ? caught.message : "Не удалось загрузить аккаунт.");
+        });
+      }
+      if (event === "SIGNED_OUT" && active) { activationEpochRef.current += 1; setMode(null); setRepository(null); setUsername(""); setUserId(""); setData(EMPTY); }
     }).data.subscription;
-    return () => { active = false; subscription?.unsubscribe(); };
+    return () => { active = false; window.clearTimeout(startupTimeout); subscription?.unsubscribe(); };
   }, [activateAccount]);
 
   useEffect(() => {
@@ -319,8 +339,9 @@ export default function Home() {
   }, [coopMasterRepository, view]);
   const pages = Math.max(1, Math.ceil(data.history.length / pageSize));
   const shown = data.history.slice((page - 1) * pageSize, page * pageSize);
-  if (!ready) return null;
-  if (!mode) return <Login onAuthenticated={activateAccount} onDemo={() => {
+  if (!ready) return <main className="login"><div className="brand"><Brand /></div><section className="loginCard"><div className="rune">⌁</div><p className="eyebrow">ПОДКЛЮЧЕНИЕ</p><h1>Загружаем ваши челленджи…</h1><p className="muted">Если Supabase отвечает медленно, через несколько секунд появится возможность войти или продолжить в demo-режиме.</p></section></main>;
+  if (!mode) return <Login serviceError={storageError} onAuthenticated={activateAccount} onDemo={() => {
+    activationEpochRef.current += 1;
     const repo = new LocalStorageUserDataRepository();
     repo.load().then((saved) => {
       const nextData = saved ?? EMPTY;
