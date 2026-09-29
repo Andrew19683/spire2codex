@@ -75,20 +75,14 @@ export default function CardMasteryChallenge({
   const activeCard = snapshot?.state.activeCardId ? cardById.get(snapshot.state.activeCardId) : null;
   const progressByCard = useMemo(() => new Map(snapshot?.progress.map((item) => [item.cardId, item.maxMasteredAscension]) ?? []), [snapshot]);
   const attemptStats = useMemo(() => {
-    const byCard = new Map<string, { attempts: number; mastered: number; lost: number; notFound: number }>();
-    for (const attempt of snapshot?.attempts ?? []) {
-      const item = byCard.get(attempt.cardId) ?? { attempts: 0, mastered: 0, lost: 0, notFound: 0 };
-      item.attempts += 1;
-      if (attempt.result === "mastered") item.mastered += 1;
-      if (attempt.result === "lost") item.lost += 1;
-      if (attempt.result === "won_not_found") item.notFound += 1;
-      byCard.set(attempt.cardId, item);
-    }
-    const rows = [...byCard].map(([cardId, item]) => ({ cardId, ...item, rate: item.attempts ? item.mastered / item.attempts * 100 : 0 }));
+    const rows = (snapshot?.attemptStats ?? []).map((item) => ({ ...item, rate: item.attempts ? item.mastered / item.attempts * 100 : 0 }));
+    const totalAttempts = rows.reduce((sum, item) => sum + item.attempts, 0);
+    const totalMastered = rows.reduce((sum, item) => sum + item.mastered, 0);
     return {
       hardest: [...rows].sort((a, b) => b.lost - a.lost || b.attempts - a.attempts)[0],
       unluckiest: [...rows].sort((a, b) => b.notFound - a.notFound || b.attempts - a.attempts)[0],
-      overallRate: snapshot?.attempts.length ? snapshot.attempts.filter((item) => item.mastered).length / snapshot.attempts.length * 100 : 0,
+      totalAttempts,
+      overallRate: totalAttempts ? totalMastered / totalAttempts * 100 : 0,
     };
   }, [snapshot]);
 
@@ -173,7 +167,7 @@ export default function CardMasteryChallenge({
         </section>
       )}
 
-      <section className="statCards masteryTotals"><div><small>ОСВОЕНО НА A10</small><b>{stats.masteredA10} / {stats.totalCards}</b></div><div><small>ПОЛНЫЙ ПРОГРЕСС</small><b>{stats.percentA10.toFixed(1)}%</b></div><div><small>ПРОГРЕСС A{snapshot.state.currentAscension}</small><b>{stats.masteredAtCurrent} / {stats.totalCards}</b></div><div><small>ПОПЫТОК</small><b>{snapshot.attempts.length}</b></div></section>
+      <section className="statCards masteryTotals"><div><small>ОСВОЕНО НА A10</small><b>{stats.masteredA10} / {stats.totalCards}</b></div><div><small>ПОЛНЫЙ ПРОГРЕСС</small><b>{stats.percentA10.toFixed(1)}%</b></div><div><small>ПРОГРЕСС A{snapshot.state.currentAscension}</small><b>{stats.masteredAtCurrent} / {stats.totalCards}</b></div><div><small>ПОПЫТОК</small><b>{attemptStats.totalAttempts}</b></div></section>
       <section className="featuredGrid masteryHighlights">
         <article className="panel"><p className="eyebrow">САМАЯ СЛОЖНАЯ</p><h3>{attemptStats.hardest ? cardById.get(attemptStats.hardest.cardId)?.name ?? attemptStats.hardest.cardId : "—"}</h3><p>{attemptStats.hardest ? `${attemptStats.hardest.lost} поражений` : "Пока недостаточно данных"}</p></article>
         <article className="panel"><p className="eyebrow">САМАЯ НЕВЕЗУЧАЯ</p><h3>{attemptStats.unluckiest ? cardById.get(attemptStats.unluckiest.cardId)?.name ?? attemptStats.unluckiest.cardId : "—"}</h3><p>{attemptStats.unluckiest ? `${attemptStats.unluckiest.notFound} побед без встречи` : "Пока недостаточно данных"}</p></article>

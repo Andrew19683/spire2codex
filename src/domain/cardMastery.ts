@@ -65,6 +65,14 @@ export type CardMasteryAttempt = {
   finishedAt: string;
 };
 
+export type CardMasteryAttemptStat = {
+  cardId: string;
+  attempts: number;
+  mastered: number;
+  lost: number;
+  notFound: number;
+};
+
 export type CardMasteryPoolStat = {
   poolId: string;
   total: number;
