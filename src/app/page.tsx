@@ -1,4 +1,5 @@
 "use client";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   calculateStats,
@@ -28,7 +29,9 @@ import { CoopMasterGroup } from "@/domain/coopMasterRotation";
 import CoopMasterRotationChallenge from "./CoopMasterRotationChallenge";
 import { ContentRepository } from "@/storage/contentRepository";
 import { CardMasteryRepository } from "@/storage/cardMasteryRepository";
-import CardMasteryChallenge from "./CardMasteryChallenge";
+import { features } from "@/config/features";
+
+const CardMasteryChallenge = dynamic(() => import("./CardMasteryChallenge"), { ssr: false });
 
 type ChallengeCardData = {
   id: string;
@@ -285,7 +288,7 @@ export default function Home() {
   const stats = calculateStats(data.history);
   const coopRepository = useMemo(() => mode === "account" && userId && getSupabase() ? new CoopRepository(getSupabase()!, userId) : null, [mode, userId]);
   const coopMasterRepository = useMemo(() => mode === "account" && userId && getSupabase() ? new CoopMasterRepository(getSupabase()!, userId) : null, [mode, userId]);
-  const cardMasteryRepository = useMemo(() => mode === "account" && userId && getSupabase() ? new CardMasteryRepository(getSupabase()!) : null, [mode, userId]);
+  const cardMasteryRepository = useMemo(() => features.cardMastery && mode === "account" && userId && getSupabase() ? new CardMasteryRepository(getSupabase()!) : null, [mode, userId]);
   const updateCardMasterySummary = useCallback((summary: { completed: boolean; ascension: number; additionalCards: number }) => setCardMasterySummary(summary), []);
   useEffect(() => {
     let active = true;
@@ -354,9 +357,9 @@ export default function Home() {
       ? `1 активная группа${activeCoopRuns ? ` · забег на A${activeCoopGroups.find((group) => group.activeRun)?.activeRun?.currentAscension}` : ""}`
       : `${activeCoopGroups.length} активные группы${activeCoopRuns ? ` · ${activeCoopRuns} ${activeCoopRuns === 1 ? "забег" : "забега"} в процессе` : ""}`;
   const challenges: ChallengeCardData[] = [
-    {
+    ...(features.cardMastery ? [{
       id: "card-mastery",
-      type: "solo",
+      type: "solo" as const,
       available: mode === "account",
       title: "Card Mastery",
       description: "Освой каждую доступную карту на A1–A10. Новая цель выбирается перед каждой попыткой.",
@@ -365,10 +368,10 @@ export default function Home() {
       additionalStatus: cardMasterySummary.additionalCards ? `Новых карт: ${cardMasterySummary.additionalCards}` : undefined,
       activeEntityCount: cardMasterySummary.completed ? 0 : 1,
       invitationCount: 0,
-      primaryRoute: "card-mastery",
+      primaryRoute: "card-mastery" as const,
       actionLabel: cardMasterySummary.completed ? "Статистика" : "Открыть",
       displayOrder: 3,
-    },
+    }] : []),
     {
       id: "ladder",
       type: "solo",
@@ -575,7 +578,7 @@ export default function Home() {
         <MasterRotationChallenge data={data.masterRotation} onChange={(masterRotation) => setData((current) => ({...current, masterRotation}))} onBack={() => setView("home")} />
       ) : view === "coop-master-rotation" ? (
         <CoopMasterRotationChallenge repository={coopMasterRepository} userId={userId} onBack={() => setView("home")} />
-      ) : view === "card-mastery" ? (
+      ) : features.cardMastery && view === "card-mastery" ? (
         <CardMasteryChallenge repository={cardMasteryRepository} contentLocale={data.preferences.contentLocale} onBack={() => setView("home")} onStateChange={updateCardMasterySummary} />
       ) : (
         <main className="ladder">

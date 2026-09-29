@@ -17,7 +17,7 @@ and optionally set `NEXT_PUBLIC_BRAND_LOGO_ALT` to update its accessible label.
 - серверные игровые данные аккаунта защищены RLS и доступны только владельцу;
 - username хранится в публичной таблице `profiles` и отображается после входа;
 - demo-режим хранит данные только в `localStorage`. Demo-данные никогда автоматически не переносятся в аккаунт.
-- соло-челлендж Card Mastery с выбором карт, прогрессом A1–A10, историей попыток и картой освоения; прогресс Card Mastery доступен после входа в аккаунт.
+- экспериментальный соло-челлендж Card Mastery с выбором карт, прогрессом A1–A10, историей попыток и картой освоения; скрыт по умолчанию и доступен после входа при включённом feature flag.
 
 ## Локальный запуск
 
@@ -34,11 +34,14 @@ npm run dev
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
+NEXT_PUBLIC_CARD_MASTERY_ENABLED=false
 ```
 
 Это публичные клиентские настройки. `service_role` и другие секретные ключи приложению не нужны и не должны попадать в Git или Vercel. `.env.local` исключён из Git.
 
 Без переменных Supabase приложение собирается и позволяет пользоваться demo-режимом, но регистрация и вход в аккаунт недоступны.
+
+Card Mastery скрыт по умолчанию. Чтобы временно включить его в локальном или preview-окружении, задайте `NEXT_PUBLIC_CARD_MASTERY_ENABLED=true` и пересоберите приложение. При выключенном флаге карточка не отображается, запросы Card Mastery не выполняются, сохранённый прогресс в Supabase не изменяется.
 
 ## Настройка Supabase
 
@@ -106,6 +109,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 
 - `NEXT_PUBLIC_SUPABASE_URL`;
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+- `NEXT_PUBLIC_CARD_MASTERY_ENABLED=false` — оставьте выключенным, пока экспериментальный челлендж не готов к публикации.
 
 Добавьте production/preview URL из Vercel в разрешённые Redirect URLs Supabase. Никакие секретные или `service_role` ключи не нужны.
 
